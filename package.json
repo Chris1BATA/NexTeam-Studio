@@ -1,6 +1,9 @@
 {
   "scripts": {
-    "dev": "vite"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "npm run build && npm run preview"
   },
   "dependencies": {
     "@rive-app/react-canvas": "^4.27.3",

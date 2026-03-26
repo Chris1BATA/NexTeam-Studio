@@ -4,6 +4,8 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: {
+    port: process.env.PORT || 5173,
+    host: "0.0.0.0",
     proxy: {
       "/api/anthropic": {
         target: "https://api.anthropic.com",
@@ -16,5 +18,10 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/elevenlabs/, "")
       }
     }
+  },
+  preview: {
+    port: process.env.PORT || 4173,
+    host: "0.0.0.0",
+    allowedHosts: ["all"]
   }
 });
