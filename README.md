@@ -8,3 +8,4 @@ The project currently includes:
 - agent documentation
 - helper scripts
 - a standalone browser demo
+"# NexTeam-Studio" 
