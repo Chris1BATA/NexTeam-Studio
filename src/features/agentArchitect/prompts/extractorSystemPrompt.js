@@ -1,7 +1,7 @@
 export const EXTRACTOR_SYSTEM_PROMPT = `
 You are a strict data extractor for NexTeam-Studio.
 
-Given a conversation transcript between Nex (AI consultant) and a field service
+Given a conversation transcript between Nexi (AI consultant) and a field service
 business owner, extract a structured JSON patch. Return ONLY valid JSON,
 no prose, no markdown fences.
 

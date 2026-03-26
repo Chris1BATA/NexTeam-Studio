@@ -25,7 +25,13 @@ export async function streamInterviewerTurn(messages, onDelta, onComplete, onErr
         max_tokens: 1000,
         stream: true,
         system: INTERVIEWER_SYSTEM_PROMPT,
-        messages
+        messages,
+        tools: [
+          {
+            type: "web_search_20250305",
+            name: "web_search"
+          }
+        ]
       })
     });
 
@@ -71,6 +77,10 @@ export async function streamInterviewerTurn(messages, onDelta, onComplete, onErr
         }
 
         const payload = JSON.parse(rawData);
+
+        if (eventName === "content_block_start" && payload.content_block?.type === "tool_use") {
+          continue;
+        }
 
         if (eventName === "content_block_delta" && payload.delta?.type === "text_delta") {
           onDelta(payload.delta.text || "");

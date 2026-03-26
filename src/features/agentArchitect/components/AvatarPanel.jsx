@@ -1,34 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import { useRive } from "@rive-app/react-canvas";
-import { useElevenLabs } from "../hooks/useElevenLabs";
 
 const src = new URL("../../../assets/avatar.riv", import.meta.url).href;
 
-export default function AvatarPanel({ conversationState, textToSpeak }) {
+export default function AvatarPanel({
+  conversationState,
+  spokenText,
+  isSpeaking,
+  amplitudeRef,
+  currentTimeRef,
+  width = 300,
+  height = 400,
+  showGlow = true,
+  showDebugLabel = true,
+  showWordHighlight = true
+}) {
   console.log("[AvatarPanel] conversationState:", conversationState);
 
   const { rive, RiveComponent } = useRive({
     src,
     autoplay: true
   });
-  const { speak, stop, isSpeaking, amplitudeRef } = useElevenLabs();
   const [visualAmplitude, setVisualAmplitude] = useState(0);
-  const lastSpokenTextRef = useRef("");
-  const hasUserInteractedRef = useRef(false);
-
-  useEffect(() => {
-    const markInteracted = () => {
-      hasUserInteractedRef.current = true;
-    };
-
-    window.addEventListener("pointerdown", markInteracted, { once: true });
-    window.addEventListener("keydown", markInteracted, { once: true });
-
-    return () => {
-      window.removeEventListener("pointerdown", markInteracted);
-      window.removeEventListener("keydown", markInteracted);
-    };
-  }, []);
+  const [currentWord, setCurrentWord] = useState("");
+  const spokenWordsRef = useRef([]);
 
   useEffect(() => {
     if (!rive) return;
@@ -37,32 +32,24 @@ export default function AvatarPanel({ conversationState, textToSpeak }) {
   }, [rive]);
 
   useEffect(() => {
-    if (!textToSpeak || textToSpeak === lastSpokenTextRef.current) {
-      return;
-    }
-
-    if (!hasUserInteractedRef.current) {
-      lastSpokenTextRef.current = textToSpeak;
-      console.log("[AvatarPanel] skipping auto TTS until first user interaction");
-      return;
-    }
-
-    lastSpokenTextRef.current = textToSpeak;
-    console.log("[AvatarPanel] triggering ElevenLabs speak for text length:", textToSpeak.length);
-    void speak(textToSpeak);
-  }, [speak, textToSpeak]);
-
-  useEffect(() => {
-    return () => {
-      void stop();
-    };
-  }, [stop]);
+    spokenWordsRef.current = (spokenText || "").split(/\s+/).filter(Boolean);
+  }, [spokenText]);
 
   useEffect(() => {
     let frame = 0;
 
     const tick = () => {
-      setVisualAmplitude(amplitudeRef.current);
+      setVisualAmplitude(amplitudeRef?.current || 0);
+
+      if (isSpeaking && spokenText) {
+        const wordsPerSecond = 2.2;
+        const words = spokenWordsRef.current;
+        const wordIndex = Math.min(words.length - 1, Math.floor((currentTimeRef?.current || 0) * wordsPerSecond));
+        setCurrentWord(words[wordIndex] || "");
+      } else {
+        setCurrentWord("");
+      }
+
       frame = requestAnimationFrame(tick);
     };
 
@@ -71,7 +58,7 @@ export default function AvatarPanel({ conversationState, textToSpeak }) {
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [amplitudeRef]);
+  }, [amplitudeRef, currentTimeRef, isSpeaking, spokenText]);
 
   useEffect(() => {
     if (!rive) return;
@@ -108,15 +95,24 @@ export default function AvatarPanel({ conversationState, textToSpeak }) {
     react_positive: "0 0 24px 4px rgba(34,197,94,0.8)",
     react_negative: "0 0 24px 4px rgba(239,68,68,0.6)"
   };
+  const textColorMap = {
+    idle: "#6B7280",
+    listening: "#3B82F6",
+    thinking: "#EAB308",
+    speaking: "#22C55E",
+    react_positive: "#16A34A",
+    react_negative: "#EF4444"
+  };
 
-  const glowColor = glowMap[conversationState] ?? glowMap.idle;
+  const glowColor = showGlow ? glowMap[conversationState] ?? glowMap.idle : "none";
+  const currentTextColor = textColorMap[conversationState] ?? textColorMap.idle;
 
   return (
     <div style={{ position: "relative" }}>
       <div
         style={{
-          width: 300,
-          height: 400,
+          width,
+          height,
           borderRadius: 16,
           boxShadow: glowColor,
           transition: "box-shadow 0.4s ease",
@@ -129,18 +125,35 @@ export default function AvatarPanel({ conversationState, textToSpeak }) {
           style={{
             position: "absolute",
             left: "50%",
-            bottom: 60,
+            bottom: Math.max(28, Math.round(height * 0.15)),
             width: `${18 + visualAmplitude * 30}px`,
             height: `${18 + visualAmplitude * 30}px`,
             transform: "translateX(-50%)",
             borderRadius: "999px",
             background: "rgba(255,255,255,0.2)",
-            boxShadow: glowColor,
+            boxShadow: showGlow ? glowColor : "none",
             transition: "width 0.08s linear, height 0.08s linear, box-shadow 0.2s ease"
           }}
         />
       </div>
-      <div style={{ color: "#aaa", fontSize: 12, textAlign: "center" }}>{conversationState}</div>
+      {showDebugLabel ? (
+        <div style={{ color: "#aaa", fontSize: 12, textAlign: "center" }}>{conversationState}</div>
+      ) : null}
+      {showWordHighlight ? (
+        <div
+          style={{
+            position: "relative",
+            textAlign: "center",
+            marginTop: 8,
+            fontSize: 18,
+            fontWeight: "bold",
+            color: currentTextColor,
+            minHeight: 28
+          }}
+        >
+          {currentWord}
+        </div>
+      ) : null}
     </div>
   );
 }

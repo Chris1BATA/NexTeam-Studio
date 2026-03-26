@@ -8,6 +8,23 @@ let mediaElementSource = null;
 let amplitudeFrame = null;
 let objectUrl = null;
 
+export function setAudioContext(context) {
+  audioContext = context;
+}
+
+function stripMarkdown(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/#{1,6}\s/g, "")
+    .replace(/`{1,3}(.*?)`{1,3}/g, "$1")
+    .replace(/\[(.*?)\]\(.*?\)/g, "$1")
+    .replace(/[-*+]\s/g, "")
+    .replace(/\n{2,}/g, ". ")
+    .replace(/\n/g, " ")
+    .trim();
+}
+
 function cleanupAudioGraph() {
   if (amplitudeFrame) {
     cancelAnimationFrame(amplitudeFrame);
@@ -37,7 +54,7 @@ function cleanupAudioGraph() {
   }
 }
 
-function startAmplitudeLoop(onAmplitude) {
+function startAmplitudeLoop(onAmplitude, onTimeUpdate) {
   if (!analyserNode) {
     return;
   }
@@ -53,6 +70,9 @@ function startAmplitudeLoop(onAmplitude) {
     const total = data.reduce((sum, value) => sum + value, 0);
     const average = data.length ? total / data.length / 255 : 0;
     onAmplitude(average);
+    if (audioElement && onTimeUpdate) {
+      onTimeUpdate(audioElement.currentTime || 0);
+    }
     amplitudeFrame = requestAnimationFrame(tick);
   };
 
@@ -67,7 +87,7 @@ export async function stopSpeaking() {
   }
 }
 
-export async function speakText(text, onAmplitude, onDone) {
+export async function speakText(text, onAmplitude, onDone, onTimeUpdate) {
   await stopSpeaking();
   console.log("[ElevenLabs] requesting TTS for text length:", text.length);
 
@@ -78,9 +98,9 @@ export async function speakText(text, onAmplitude, onDone) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      text,
+      text: stripMarkdown(text),
       model_id: "eleven_turbo_v2",
-      voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+      voice_settings: { stability: 0.5, similarity_boost: 0.75, speed: 0.95 }
     })
   });
 
@@ -139,6 +159,9 @@ export async function speakText(text, onAmplitude, onDone) {
   const donePromise = new Promise((resolve) => {
     const finalize = () => {
       onAmplitude(0);
+      if (onTimeUpdate) {
+        onTimeUpdate(0);
+      }
       resolve();
     };
 
@@ -146,7 +169,7 @@ export async function speakText(text, onAmplitude, onDone) {
     audioElement.addEventListener("error", finalize, { once: true });
   });
 
-  startAmplitudeLoop(onAmplitude);
+  startAmplitudeLoop(onAmplitude, onTimeUpdate);
 
   console.log("[ElevenLabs] attempting audio playback");
   await audioElement.play();
