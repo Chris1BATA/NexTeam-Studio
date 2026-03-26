@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { streamInterviewerTurn, extractPatch } from "../services/architectApi";
 import { applyAgentPatch } from "../services/firestoreSession";
 import AvatarPanel from "./AvatarPanel";
+import { Composer } from "./Composer";
 import SpecReviewPanel from "./SpecReviewPanel";
 import { AVATAR_STATES } from "../constants/avatarStates";
 import { useAgentArchitectSelector, useAgentArchitectSession } from "../hooks/useAgentArchitectSession";
@@ -68,23 +69,6 @@ const shellStyles = {
     border: "1px solid #93c5fd",
     marginLeft: "auto"
   },
-  composer: {
-    display: "flex",
-    gap: "8px"
-  },
-  input: {
-    flex: 1,
-    padding: "10px 12px",
-    borderRadius: "8px",
-    border: "1px solid #d0d7de"
-  },
-  button: {
-    padding: "10px 16px",
-    borderRadius: "8px",
-    border: "1px solid #d0d7de",
-    background: "#ffffff",
-    cursor: "pointer"
-  },
   patchPreview: {
     margin: 0,
     padding: "12px",
@@ -138,20 +122,6 @@ const shellStyles = {
     cursor: "pointer",
     boxShadow: "0 0 40px rgba(79,70,229,0.5)",
     transition: "opacity 0.2s ease, transform 0.2s ease"
-  },
-  micButton: {
-    background: "#1F2937",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "50%",
-    width: 48,
-    height: 48,
-    fontSize: 20,
-    cursor: "pointer",
-    marginLeft: 8,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center"
   }
 };
 
@@ -163,11 +133,8 @@ export function AgentArchitectShell() {
   const [messages, setMessages] = useState([]);
   const [streamingText, setStreamingText] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [input, setInput] = useState("");
   const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const [isMicListening, setIsMicListening] = useState(false);
   const [isStartHovered, setIsStartHovered] = useState(false);
-  const [isComposerFocused, setIsComposerFocused] = useState(false);
   const [sessionId, setSessionId] = useState("");
   const [agentId, setAgentId] = useState("");
   const [draftPatch, setDraftPatch] = useState({});
@@ -176,15 +143,11 @@ export function AgentArchitectShell() {
   const [errorMessage, setErrorMessage] = useState("");
   const hasBootstrappedRef = useRef(false);
   const chatContainerRef = useRef(null);
-  const recognitionRef = useRef(null);
-  const micSendTimeoutRef = useRef(null);
 
   const avatarState =
     isStreaming || streamingText
       ? AVATAR_STATES.SPEAKING
-      : isComposerFocused || input.trim()
-        ? AVATAR_STATES.LISTENING
-        : machineAvatarState || AVATAR_STATES.IDLE;
+      : machineAvatarState || AVATAR_STATES.IDLE;
 
   useEffect(() => {
     send({ type: "BOOT" });
@@ -210,15 +173,6 @@ export function AgentArchitectShell() {
 
   useEffect(() => {
     return () => {
-      if (micSendTimeoutRef.current) {
-        clearTimeout(micSendTimeoutRef.current);
-      }
-      if (recognitionRef.current) {
-        recognitionRef.current.onresult = null;
-        recognitionRef.current.onend = null;
-        recognitionRef.current.onerror = null;
-        recognitionRef.current.stop();
-      }
       void stop();
     };
   }, [stop]);
@@ -338,81 +292,17 @@ export function AgentArchitectShell() {
     );
   }
 
-  async function handleSend() {
-    if (!input.trim() || isStreaming) {
+  async function handleSend(text) {
+    if (!text?.trim() || isStreaming) {
       return;
     }
 
-    const nextInput = input;
-    setInput("");
-    await sendTurn(nextInput, true);
-  }
-
-  function handleKeyDown(event) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      void handleSend();
-    }
-  }
-
-  function handleMicClick() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition || isStreaming) {
-      return;
-    }
-
-    if (micSendTimeoutRef.current) {
-      clearTimeout(micSendTimeoutRef.current);
-      micSendTimeoutRef.current = null;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "en-US";
-
-    recognitionRef.current = recognition;
-    setIsMicListening(true);
-
-    recognition.onresult = (event) => {
-      const transcript = event.results?.[0]?.[0]?.transcript?.trim() || "";
-
-      if (!transcript) {
-        setIsMicListening(false);
-        return;
-      }
-
-      setInput(transcript);
-      setIsMicListening(false);
-      micSendTimeoutRef.current = setTimeout(() => {
-        setInput("");
-        void sendTurn(transcript, true);
-      }, 600);
-    };
-
-    recognition.onend = () => {
-      setIsMicListening(false);
-    };
-
-    recognition.onerror = (event) => {
-      setIsMicListening(false);
-      console.warn("[Mic] speech recognition error:", event.error);
-    };
-
-    recognition.start();
+    await sendTurn(text, true);
   }
 
   if (!voiceEnabled) {
     return (
       <>
-        <style>{`
-          @keyframes micPulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.15); }
-            100% { transform: scale(1); }
-          }
-        `}</style>
         <div style={shellStyles.splashOverlay}>
           <div style={shellStyles.splashBrand}>NexTeam-Studio</div>
           <AvatarPanel
@@ -448,15 +338,7 @@ export function AgentArchitectShell() {
   }
 
   return (
-    <>
-      <style>{`
-        @keyframes micPulse {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.15); }
-          100% { transform: scale(1); }
-        }
-      `}</style>
-      <div style={shellStyles.page}>
+    <div style={shellStyles.page}>
       <div style={shellStyles.layout}>
         <AvatarPanel
           conversationState={avatarState || AVATAR_STATES.IDLE}
@@ -506,44 +388,16 @@ export function AgentArchitectShell() {
               ) : null}
             </div>
 
-            <div style={shellStyles.composer}>
-              <input
-                type="text"
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                onFocus={() => setIsComposerFocused(true)}
-                onBlur={() => setIsComposerFocused(false)}
-                onKeyDown={handleKeyDown}
-                placeholder="Type your message..."
-                style={shellStyles.input}
-              />
-              <button
-                type="button"
-                onClick={() => void handleSend()}
-                disabled={isStreaming}
-                style={shellStyles.button}
-              >
-                Send
-              </button>
-              <button
-                type="button"
-                onClick={handleMicClick}
-                disabled={isStreaming}
-                style={{
-                  ...shellStyles.micButton,
-                  background: isMicListening ? "#EF4444" : shellStyles.micButton.background,
-                  animation: isMicListening ? "micPulse 1s infinite" : "none"
-                }}
-              >
-                🎤
-              </button>
-            </div>
+            <Composer
+              onSend={(text) => handleSend(text)}
+              isSpeaking={isSpeaking}
+              onBarge={() => stop()}
+            />
 
             <pre style={shellStyles.patchPreview}>{JSON.stringify(draftPatch, null, 2)}</pre>
           </div>
         )}
       </div>
     </div>
-    </>
   );
 }
