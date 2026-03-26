@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { streamInterviewerTurn, extractPatch } from "../services/architectApi";
 import { applyAgentPatch } from "../services/firestoreSession";
+import AvatarPanel from "./AvatarPanel";
+import { AVATAR_STATES } from "../constants/avatarStates";
+import { useAgentArchitectSelector, useAgentArchitectSession } from "../hooks/useAgentArchitectSession";
 
 const shellStyles = {
   page: {
@@ -8,6 +11,13 @@ const shellStyles = {
     justifyContent: "center",
     padding: "24px",
     fontFamily: "sans-serif"
+  },
+  layout: {
+    display: "flex",
+    gap: "24px",
+    alignItems: "flex-start",
+    width: "100%",
+    maxWidth: "1224px"
   },
   container: {
     width: "100%",
@@ -85,10 +95,13 @@ const shellStyles = {
 };
 
 export function AgentArchitectShell() {
+  const { actorRef, send } = useAgentArchitectSession();
+  const machineAvatarState = useAgentArchitectSelector(actorRef, (snapshot) => snapshot.context.avatarState);
   const [messages, setMessages] = useState([]);
   const [streamingText, setStreamingText] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [input, setInput] = useState("");
+  const [isComposerFocused, setIsComposerFocused] = useState(false);
   const [sessionId, setSessionId] = useState("");
   const [agentId, setAgentId] = useState("");
   const [draftPatch, setDraftPatch] = useState({});
@@ -96,10 +109,18 @@ export function AgentArchitectShell() {
   const [errorMessage, setErrorMessage] = useState("");
   const hasBootstrappedRef = useRef(false);
 
+  const avatarState =
+    isStreaming || streamingText
+      ? AVATAR_STATES.SPEAKING
+      : isComposerFocused || input.trim()
+        ? AVATAR_STATES.LISTENING
+        : machineAvatarState || AVATAR_STATES.IDLE;
+
   useEffect(() => {
+    send({ type: "BOOT" });
     setSessionId(crypto.randomUUID());
     setAgentId(crypto.randomUUID());
-  }, []);
+  }, [send]);
 
   useEffect(() => {
     if (!sessionId || !agentId || hasBootstrappedRef.current) {
@@ -107,8 +128,9 @@ export function AgentArchitectShell() {
     }
 
     hasBootstrappedRef.current = true;
+    send({ type: "BOOT_SUCCESS" });
     void sendTurn("Hello, I am ready to build an agent.", false);
-  }, [sessionId, agentId]);
+  }, [sessionId, agentId, send]);
 
   async function sendTurn(rawInput, shouldAppendUserMessage = true) {
     const trimmedInput = rawInput.trim();
@@ -126,6 +148,7 @@ export function AgentArchitectShell() {
     setErrorMessage("");
     setIsStreaming(true);
     setStreamingText("");
+    send({ type: "SUBMIT_TURN" });
 
     let assistantText = "";
 
@@ -134,6 +157,10 @@ export function AgentArchitectShell() {
         ? nextMessages
         : [{ role: "user", content: "Hello, I am ready to build an agent." }],
       (delta) => {
+        if (!assistantText) {
+          send({ type: "TURN_ACCEPTED" });
+        }
+
         assistantText += delta;
         setStreamingText((current) => current + delta);
       },
@@ -147,13 +174,16 @@ export function AgentArchitectShell() {
         setMessages(transcript);
         setStreamingText("");
         setIsStreaming(false);
+        send({ type: "STREAM_COMPLETE" });
 
         const extracted = await extractPatch(transcript);
 
         if (!extracted) {
+          send({ type: "READY_FOR_INPUT" });
           return;
         }
 
+        send({ type: "PATCH_EXTRACTED" });
         setCurrentStage(extracted.stage || "name");
         setDraftPatch((current) => ({
           ...current,
@@ -167,12 +197,20 @@ export function AgentArchitectShell() {
           extracted.stage || "name",
           extracted.missingFields || []
         );
+
+        if (extracted.isComplete) {
+          send({ type: "COMPLETE" });
+        } else {
+          send({ type: "PATCH_PERSISTED" });
+          send({ type: "READY_FOR_INPUT" });
+        }
       },
       (error) => {
         console.error(error);
         setStreamingText("");
         setIsStreaming(false);
         setErrorMessage(error?.message || "Something went wrong while contacting Claude.");
+        send({ type: "STREAM_FAILURE" });
       }
     );
   }
@@ -196,56 +234,64 @@ export function AgentArchitectShell() {
 
   return (
     <div style={shellStyles.page}>
-      <div style={shellStyles.container}>
-        <h1 style={shellStyles.title}>Agent Architect Studio — Phase 3 live conversation</h1>
-        <div style={shellStyles.status}>Current stage: {currentStage}</div>
+      <div style={shellStyles.layout}>
+        <AvatarPanel conversationState={avatarState || AVATAR_STATES.IDLE} />
 
-        <div style={shellStyles.messages}>
-          {errorMessage ? (
-            <div style={{ color: "#b42318", fontSize: "14px" }}>{errorMessage}</div>
-          ) : null}
+        <div style={shellStyles.container}>
+          <h1 style={shellStyles.title}>Agent Architect Studio - Phase 3 live conversation</h1>
+          <div style={shellStyles.status}>
+            Current stage: {currentStage} | Avatar state: {avatarState || AVATAR_STATES.IDLE}
+          </div>
 
-          {messages.map((message, index) => (
-            <div
-              key={`${message.role}-${index}`}
-              style={{
-                ...shellStyles.bubbleRow,
-                justifyContent: message.role === "user" ? "flex-end" : "flex-start"
-              }}
-            >
+          <div style={shellStyles.messages}>
+            {errorMessage ? (
+              <div style={{ color: "#b42318", fontSize: "14px" }}>{errorMessage}</div>
+            ) : null}
+
+            {messages.map((message, index) => (
               <div
+                key={`${message.role}-${index}`}
                 style={{
-                  ...shellStyles.bubble,
-                  ...(message.role === "user" ? shellStyles.userBubble : shellStyles.assistantBubble)
+                  ...shellStyles.bubbleRow,
+                  justifyContent: message.role === "user" ? "flex-end" : "flex-start"
                 }}
               >
-                {message.content}
+                <div
+                  style={{
+                    ...shellStyles.bubble,
+                    ...(message.role === "user" ? shellStyles.userBubble : shellStyles.assistantBubble)
+                  }}
+                >
+                  {message.content}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
-          {isStreaming && streamingText ? (
-            <div style={{ ...shellStyles.bubbleRow, justifyContent: "flex-start" }}>
-              <div style={{ ...shellStyles.bubble, ...shellStyles.assistantBubble }}>{streamingText}</div>
-            </div>
-          ) : null}
+            {isStreaming && streamingText ? (
+              <div style={{ ...shellStyles.bubbleRow, justifyContent: "flex-start" }}>
+                <div style={{ ...shellStyles.bubble, ...shellStyles.assistantBubble }}>{streamingText}</div>
+              </div>
+            ) : null}
+          </div>
+
+          <div style={shellStyles.composer}>
+            <input
+              type="text"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              onFocus={() => setIsComposerFocused(true)}
+              onBlur={() => setIsComposerFocused(false)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type your message..."
+              style={shellStyles.input}
+            />
+            <button type="button" onClick={() => void handleSend()} disabled={isStreaming} style={shellStyles.button}>
+              Send
+            </button>
+          </div>
+
+          <pre style={shellStyles.patchPreview}>{JSON.stringify(draftPatch, null, 2)}</pre>
         </div>
-
-        <div style={shellStyles.composer}>
-          <input
-            type="text"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your message..."
-            style={shellStyles.input}
-          />
-          <button type="button" onClick={() => void handleSend()} disabled={isStreaming} style={shellStyles.button}>
-            Send
-          </button>
-        </div>
-
-        <pre style={shellStyles.patchPreview}>{JSON.stringify(draftPatch, null, 2)}</pre>
       </div>
     </div>
   );
