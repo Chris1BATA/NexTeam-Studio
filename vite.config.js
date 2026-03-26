@@ -9,6 +9,11 @@ export default defineConfig({
         target: "https://api.anthropic.com",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/anthropic/, "")
+      },
+      "/elevenlabs": {
+        target: "https://api.elevenlabs.io",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/elevenlabs/, "")
       }
     }
   }

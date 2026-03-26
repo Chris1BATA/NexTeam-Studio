@@ -106,6 +106,7 @@ export function AgentArchitectShell() {
   const [agentId, setAgentId] = useState("");
   const [draftPatch, setDraftPatch] = useState({});
   const [currentStage, setCurrentStage] = useState("name");
+  const [latestAssistantText, setLatestAssistantText] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const hasBootstrappedRef = useRef(false);
 
@@ -172,6 +173,7 @@ export function AgentArchitectShell() {
         const transcript = [...nextMessages, assistantMessage];
 
         setMessages(transcript);
+        setLatestAssistantText(assistantText);
         setStreamingText("");
         setIsStreaming(false);
         send({ type: "STREAM_COMPLETE" });
@@ -235,7 +237,10 @@ export function AgentArchitectShell() {
   return (
     <div style={shellStyles.page}>
       <div style={shellStyles.layout}>
-        <AvatarPanel conversationState={avatarState || AVATAR_STATES.IDLE} />
+        <AvatarPanel
+          conversationState={avatarState || AVATAR_STATES.IDLE}
+          textToSpeak={latestAssistantText}
+        />
 
         <div style={shellStyles.container}>
           <h1 style={shellStyles.title}>Agent Architect Studio - Phase 3 live conversation</h1>
