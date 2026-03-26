@@ -8,6 +8,14 @@ import { AVATAR_STATES } from "../constants/avatarStates";
 import { useAgentArchitectSelector, useAgentArchitectSession } from "../hooks/useAgentArchitectSession";
 import { unlockAudio, useElevenLabs } from "../hooks/useElevenLabs";
 
+function stripMarkdown(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/`(.*?)`/g, "$1")
+    .replace(/#{1,6}\s/g, "");
+}
+
 const shellStyles = {
   page: {
     display: "flex",
@@ -178,8 +186,9 @@ export function AgentArchitectShell() {
   }, [stop]);
 
   async function handleStartConversation() {
-    const greetingText =
+    const greetingText = stripMarkdown(
       "Hey there! I'm Nexi, your AI operations consultant at NexTeam-Studio. I help field service businesses build AI agents that run their day-to-day operations. Let's start with the basics — what's your business called?";
+    );
 
     setVoiceEnabled(true);
     unlockAudio();
@@ -224,9 +233,11 @@ export function AgentArchitectShell() {
           send({ type: "TURN_ACCEPTED" });
         }
 
-        assistantText += delta;
-        pushChunk(delta);
-        setStreamingText((current) => current + delta);
+        const cleanDelta = stripMarkdown(delta);
+
+        assistantText += cleanDelta;
+        pushChunk(cleanDelta);
+        setStreamingText((current) => current + cleanDelta);
       },
       async () => {
         const COMPLETION_PHRASES = [
@@ -234,7 +245,7 @@ export function AgentArchitectShell() {
           "give me a moment while i put this together",
           "i have everything i need to build"
         ];
-        const assembledText = assistantText;
+        const assembledText = stripMarkdown(assistantText);
         const lowerText = assembledText.toLowerCase();
         const assistantIndicatedCompletion = COMPLETION_PHRASES.some((phrase) => lowerText.includes(phrase));
 
@@ -394,7 +405,6 @@ export function AgentArchitectShell() {
               onBarge={() => stop()}
             />
 
-            <pre style={shellStyles.patchPreview}>{JSON.stringify(draftPatch, null, 2)}</pre>
           </div>
         )}
       </div>
