@@ -151,8 +151,18 @@ export default function SpecReviewPanel({ agentSpec }) {
       </section>
 
       <div style={reviewStyles.actions}>
-        <button type="button" style={reviewStyles.primaryButton} onClick={() => console.log("Build My Agent")}>
-          Build My Agent
+        <button
+          type="button"
+          style={reviewStyles.primaryButton}
+          onClick={() => {
+            const paymentLink = import.meta.env.VITE_STRIPE_PAYMENT_LINK;
+            const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+            const successUrl = encodeURIComponent(`${appUrl}/success`);
+            const cancelUrl = encodeURIComponent(`${appUrl}/agent-architect`);
+            window.location.href = `${paymentLink}?success_url=${successUrl}&cancel_url=${cancelUrl}`;
+          }}
+        >
+          Build My Agent — $197
         </button>
         <button type="button" style={reviewStyles.secondaryButton} onClick={() => window.location.reload()}>
           Start Over
