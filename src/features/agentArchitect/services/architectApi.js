@@ -6,10 +6,8 @@ const ANTHROPIC_MODEL = "claude-sonnet-4-5";
 
 function buildHeaders() {
   return {
-    "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
     "anthropic-version": "2023-06-01",
-    "content-type": "application/json",
-    "anthropic-dangerous-direct-browser-access": "true"
+    "content-type": "application/json"
   };
 }
 

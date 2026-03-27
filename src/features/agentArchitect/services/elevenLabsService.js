@@ -94,7 +94,6 @@ export async function speakText(text, onAmplitude, onDone, onTimeUpdate) {
   const response = await fetch(ELEVENLABS_STREAM_URL, {
     method: "POST",
     headers: {
-      "xi-api-key": import.meta.env.VITE_ELEVENLABS_API_KEY,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
