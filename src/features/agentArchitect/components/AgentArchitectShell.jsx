@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { streamInterviewerTurn, extractPatch } from "../services/architectApi";
-import { applyAgentPatch } from "../services/firestoreSession";
+import { applyAgentPatch, completeAgent } from "../services/firestoreSession";
 import AvatarPanel from "./AvatarPanel";
 import { Composer } from "./Composer";
 import SpecReviewPanel from "./SpecReviewPanel";
@@ -286,6 +286,7 @@ export function AgentArchitectShell() {
         );
 
         if (assistantIndicatedCompletion || extracted.isComplete) {
+          await completeAgent(agentId, sessionId);
           send({ type: "READY_TO_REVIEW" });
           send({ type: "COMPLETE" });
         } else {
