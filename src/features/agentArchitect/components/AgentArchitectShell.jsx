@@ -187,7 +187,7 @@ export function AgentArchitectShell() {
 
   async function handleStartConversation() {
     const greetingText = stripMarkdown(
-      "Hey there! I'm Nexi, your AI operations consultant at NexTeam-Studio. I help field service businesses build AI agents that run their day-to-day operations. Let's start with the basics — what's your business called?";
+      "Hey there! I'm Nexi, your AI operations consultant at NexTeam-Studio. I help field service businesses build AI agents that run their day-to-day operations. Let's start with the basics — what's your business called?"
     );
 
     setVoiceEnabled(true);
