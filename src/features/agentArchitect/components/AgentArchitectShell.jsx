@@ -298,7 +298,7 @@ export function AgentArchitectShell() {
         console.error(error);
         setStreamingText("");
         setIsStreaming(false);
-        setErrorMessage(error?.message || "Something went wrong while contacting Claude.");
+        setErrorMessage(error?.isFriendly ? error.message : "Something went wrong. Please try again.");
         send({ type: "STREAM_FAILURE" });
       }
     );
