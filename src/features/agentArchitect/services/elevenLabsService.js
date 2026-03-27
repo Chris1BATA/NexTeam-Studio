@@ -1,4 +1,4 @@
-const ELEVENLABS_VOICE_ID = "v6YipgeyiXn5cMqsg5oD";
+const ELEVENLABS_VOICE_ID = "YYINOwVpecHUim8ReMlk";
 const ELEVENLABS_STREAM_URL = `/elevenlabs/v1/text-to-speech/${ELEVENLABS_VOICE_ID}/stream`;
 
 let audioContext = null;
