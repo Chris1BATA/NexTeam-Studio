@@ -12,7 +12,7 @@ export default function AvatarPanel({
   width = 300,
   height = 400,
   showGlow = true,
-  showDebugLabel = true,
+  showDebugLabel = false,
   showWordHighlight = true
 }) {
   console.log("[AvatarPanel] conversationState:", conversationState);

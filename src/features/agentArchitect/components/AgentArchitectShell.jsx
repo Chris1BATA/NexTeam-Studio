@@ -5,6 +5,7 @@ import AvatarPanel from "./AvatarPanel";
 import { Composer } from "./Composer";
 import SpecReviewPanel from "./SpecReviewPanel";
 import { AVATAR_STATES } from "../constants/avatarStates";
+import { resolveAvatarState } from "../utils/avatarStateMap";
 import { useAgentArchitectSelector, useAgentArchitectSession } from "../hooks/useAgentArchitectSession";
 import { unlockAudio, useElevenLabs } from "../hooks/useElevenLabs";
 
@@ -152,10 +153,12 @@ export function AgentArchitectShell() {
   const hasBootstrappedRef = useRef(false);
   const chatContainerRef = useRef(null);
 
-  const avatarState =
-    isStreaming || streamingText
-      ? AVATAR_STATES.SPEAKING
-      : machineAvatarState || AVATAR_STATES.IDLE;
+  const avatarState = resolveAvatarState({
+    isStreaming: isStreaming || !!streamingText,
+    isSpeaking,
+    machineAvatarState,
+    machineState
+  });
 
   useEffect(() => {
     send({ type: "BOOT" });
@@ -366,10 +369,7 @@ export function AgentArchitectShell() {
           <SpecReviewPanel agentSpec={draftPatch} />
         ) : (
           <div style={shellStyles.container}>
-            <h1 style={shellStyles.title}>Agent Architect Studio - Phase 3 live conversation</h1>
-            <div style={shellStyles.status}>
-              Current stage: {currentStage} | Avatar state: {avatarState || AVATAR_STATES.IDLE}
-            </div>
+            <h1 style={shellStyles.title}>Meet Nexi — Your AI Operations Consultant</h1>
 
             <div ref={chatContainerRef} style={shellStyles.messages}>
               {errorMessage ? (
