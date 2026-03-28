@@ -1,4 +1,5 @@
-export function RiveAvatar() {
-  // TODO: host the Rive avatar runtime and map app state into animation inputs.
-  return null;
+import AvatarPanel from "./AvatarPanel";
+
+export function RiveAvatar(props) {
+  return <AvatarPanel {...props} />;
 }

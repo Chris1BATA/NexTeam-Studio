@@ -1,29 +1,31 @@
 export const STAGES = [
-  "name",
-  "domain",
-  "mission",
-  "tasks",
-  "inputs_outputs",
-  "tools",
-  "restrictions",
-  "approvals",
-  "stop_conditions",
-  "success_criteria",
-  "review",
+  "business_name",
+  "trade",
+  "crew_size",
+  "job_volume",
+  "service_area",
+  "biggest_pain",
+  "existing_tools",
+  "agent_recommendation",
+  "priority_agent",
+  "agent_name",
+  "confirm",
   "complete"
 ];
 
 export const STAGE_LABELS = {
-  name: "Name",
-  domain: "Domain",
-  mission: "Mission",
-  tasks: "Tasks",
-  inputs_outputs: "Inputs & Outputs",
-  tools: "Tools",
-  restrictions: "Restrictions",
-  approvals: "Approvals",
-  stop_conditions: "Stop Conditions",
-  success_criteria: "Success Criteria",
-  review: "Review",
+  business_name: "Business Name",
+  trade: "Trade",
+  crew_size: "Crew Size",
+  job_volume: "Job Volume",
+  service_area: "Service Area",
+  biggest_pain: "Biggest Pain",
+  existing_tools: "Existing Tools",
+  agent_recommendation: "Agent Recommendation",
+  priority_agent: "Priority Agent",
+  agent_name: "Agent Name",
+  confirm: "Confirmation",
   complete: "Complete"
 };
+
+export const FINAL_STAGE = "complete";

@@ -1,4 +1,5 @@
-export function StreamingAssistantBubble() {
-  // TODO: render the in-progress assistant response while streaming.
-  return null;
+import { MessageBubble } from "./MessageBubble";
+
+export function StreamingAssistantBubble({ content = "" }) {
+  return <MessageBubble role="assistant" content={content} isStreaming />;
 }
