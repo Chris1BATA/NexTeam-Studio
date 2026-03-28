@@ -28,6 +28,7 @@ const styles = {
     borderBottom: "1px solid #21262D",
     paddingBottom: 16
   },
+
   title: {
     margin: 0,
     fontSize: 22,

@@ -44,6 +44,7 @@ const shellStyles = {
   title: {
     margin: 0
   },
+
   status: {
     fontSize: "14px",
     color: "#57606a"
@@ -106,8 +107,9 @@ const shellStyles = {
     fontWeight: 600,
     letterSpacing: 4,
     textTransform: "uppercase",
-    marginBottom: 40
+    marginBottom: 24
   },
+
   splashTitle: {
     color: "#ffffff",
     fontSize: 42,
