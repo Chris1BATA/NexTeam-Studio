@@ -34,8 +34,11 @@ export async function applyAgentPatch(agentId, sessionId, patch, stage, missingF
     }
 
     await setDoc(ref, data, { merge: true });
+    console.log(
+      `[firestoreSession] ✅ patch written — path: agentSessions/${sessionId} stage: ${stage || "unknown"} isNew: ${isNew}`
+    );
   } catch (err) {
-    console.error("[firestoreSession] applyAgentPatch error:", err.message);
+    console.error("[firestoreSession] ❌ applyAgentPatch error:", err.message, "sessionId:", sessionId);
   }
 
   return null;
@@ -57,8 +60,9 @@ export async function completeAgent(agentId, sessionId) {
       completedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+    console.log(`[firestoreSession] ✅ session completed — path: agentSessions/${sessionId}`);
   } catch (err) {
-    console.error("[firestoreSession] completeAgent error:", err.message);
+    console.error("[firestoreSession] ❌ completeAgent error:", err.message, "sessionId:", sessionId);
   }
 
   return null;
