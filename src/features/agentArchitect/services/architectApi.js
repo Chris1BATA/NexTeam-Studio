@@ -2,7 +2,7 @@ import { EXTRACTOR_SYSTEM_PROMPT } from "../prompts/extractorSystemPrompt";
 import { INTERVIEWER_SYSTEM_PROMPT } from "../prompts/interviewerSystemPrompt";
 
 const ANTHROPIC_API_URL = "/api/anthropic/v1/messages";
-const ANTHROPIC_MODEL = "claude-sonnet-4-5";
+const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
 
 // Retry config — rate limits only
 const MAX_RETRIES = 3;
