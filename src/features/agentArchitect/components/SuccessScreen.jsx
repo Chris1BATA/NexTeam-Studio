@@ -156,14 +156,21 @@ export default function SuccessScreen() {
         </div>
       </div>
 
-      {bookingLink !== "#" ? (
+      {bookingLink && bookingLink !== "#" && bookingLink !== "undefined" ? (
         <a href={bookingLink} target="_blank" rel="noopener noreferrer" style={successStyles.bookButton}>
           Book Your Setup Call →
         </a>
-      ) : null}
+      ) : (
+        <p style={{ ...successStyles.footer, color: "#9CA3AF", fontSize: 15 }}>
+          Our team will reach out within 24 hours to schedule your setup call.
+        </p>
+      )}
 
       <p style={successStyles.footer}>
-        Questions? Reply to your confirmation email — we'll get back to you fast.
+        Questions? Reach out at{" "}
+        <a href="mailto:hello@nexteam.studio" style={{ color: "#4F46E5" }}>
+          hello@nexteam.studio
+        </a>
       </p>
     </div>
   );

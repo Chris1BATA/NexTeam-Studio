@@ -95,38 +95,44 @@ function formatAgentLabel(value) {
 
 export default function SpecReviewPanel({ agentSpec }) {
   const {
-    businessName = "Your Business",
-    trade = "Field Service",
-    serviceArea = "Not provided",
-    agentMission = "Your custom agent will be configured based on your business needs.",
+    businessName,
+    trade,
+    serviceArea,
+    agentMission,
     recommendedAgents = [],
-    priorityAgent = "To be decided",
-    agentName = "New Agent"
+    priorityAgent,
+    agentName
   } = agentSpec || {};
 
   const safeBusinessName = businessName || "Your Business";
-  const safeTrade = trade || "Field Service";
-  const safeServiceArea = serviceArea || "Not provided";
-  const safeAgentMission = agentMission || "Your custom agent will be configured based on your business needs.";
+  const safeTrade = trade || "field service";
+  const safeAgentMission =
+    agentMission ||
+    "Your custom agent will be configured around your exact workflow and team needs.";
   const safeRecommendedAgents = Array.isArray(recommendedAgents) ? recommendedAgents.filter(Boolean) : [];
-  const safePriorityAgent =
-    !priorityAgent || priorityAgent === "not_selected" ? "To be decided" : priorityAgent;
-  const safeAgentName = agentName || "New Agent";
+  const hasPriorityAgent = priorityAgent && priorityAgent !== "not_selected";
+  const safeAgentName = agentName || "Your Nexi Agent";
+
+  // Build a natural business summary sentence
+  const businessSummaryParts = [safeBusinessName, "is a", safeTrade, "business"];
+  if (serviceArea) businessSummaryParts.push("serving", serviceArea);
+  const businessSummary = businessSummaryParts.join(" ") + ".";
+
+  const paymentLink = import.meta.env.VITE_STRIPE_PAYMENT_LINK;
+  const hasPaymentLink = paymentLink && paymentLink !== "undefined";
 
   return (
     <div style={reviewStyles.card}>
-      <p style={reviewStyles.eyebrow}>Your Agent is Ready</p>
+      <p style={reviewStyles.eyebrow}>Your Blueprint is Ready</p>
       <h1 style={reviewStyles.title}>{safeAgentName}</h1>
 
       <section style={reviewStyles.section}>
-        <h2 style={reviewStyles.sectionTitle}>Business summary</h2>
-        <p style={reviewStyles.text}>
-          {safeBusinessName} is a {safeTrade} business serving {safeServiceArea}.
-        </p>
+        <h2 style={reviewStyles.sectionTitle}>Business overview</h2>
+        <p style={reviewStyles.text}>{businessSummary}</p>
       </section>
 
       <section style={reviewStyles.section}>
-        <h2 style={reviewStyles.sectionTitle}>What this agent does</h2>
+        <h2 style={reviewStyles.sectionTitle}>What your agent will do</h2>
         <p style={reviewStyles.text}>{safeAgentMission}</p>
       </section>
 
@@ -143,27 +149,39 @@ export default function SpecReviewPanel({ agentSpec }) {
         </section>
       ) : null}
 
-      <section style={reviewStyles.section}>
-        <h2 style={reviewStyles.sectionTitle}>Starting with</h2>
-        <span style={reviewStyles.priority}>
-          {safePriorityAgent === "To be decided" ? safePriorityAgent : formatAgentLabel(safePriorityAgent)}
-        </span>
-      </section>
+      {hasPriorityAgent ? (
+        <section style={reviewStyles.section}>
+          <h2 style={reviewStyles.sectionTitle}>Where we start</h2>
+          <span style={reviewStyles.priority}>{formatAgentLabel(priorityAgent)}</span>
+        </section>
+      ) : null}
 
       <div style={reviewStyles.actions}>
-        <button
-          type="button"
-          style={reviewStyles.primaryButton}
-          onClick={() => {
-            const paymentLink = import.meta.env.VITE_STRIPE_PAYMENT_LINK;
-            const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-            const successUrl = encodeURIComponent(`${appUrl}/success`);
-            const cancelUrl = encodeURIComponent(`${appUrl}/agent-architect`);
-            window.location.href = `${paymentLink}?success_url=${successUrl}&cancel_url=${cancelUrl}`;
-          }}
-        >
-          Build My Agent — $197
-        </button>
+        {hasPaymentLink ? (
+          <button
+            type="button"
+            style={reviewStyles.primaryButton}
+            onClick={() => {
+              const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+              const successUrl = encodeURIComponent(`${appUrl}/success`);
+              const cancelUrl = encodeURIComponent(`${appUrl}/agent-architect`);
+              window.location.href = `${paymentLink}?success_url=${successUrl}&cancel_url=${cancelUrl}`;
+            }}
+          >
+            Build My Agent — $197
+          </button>
+        ) : (
+          <button
+            type="button"
+            style={reviewStyles.primaryButton}
+            onClick={() => {
+              // Fallback: scroll to contact or show next step
+              window.alert("Our team will be in touch shortly to finalize your agent setup.");
+            }}
+          >
+            Get Started →
+          </button>
+        )}
         <button type="button" style={reviewStyles.secondaryButton} onClick={() => window.location.reload()}>
           Start Over
         </button>
