@@ -263,7 +263,7 @@ export function AgentArchitectShell() {
         setIsStreaming(false);
         send({ type: "STREAM_COMPLETE" });
 
-        const extracted = await extractPatch(transcript);
+        const extracted = await extractPatch(transcript, draftPatch);
 
         if (!extracted) {
           send({ type: "READY_FOR_INPUT" });
@@ -300,7 +300,9 @@ export function AgentArchitectShell() {
         setIsStreaming(false);
         setErrorMessage(error?.isFriendly ? error.message : "Something went wrong. Please try again.");
         send({ type: "STREAM_FAILURE" });
-      }
+      },
+      draftPatch,
+      currentStage
     );
   }
 
