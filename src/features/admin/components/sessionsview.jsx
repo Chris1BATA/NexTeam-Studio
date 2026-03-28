@@ -231,6 +231,7 @@ export function SessionsView() {
             <tr>
               <th style={styles.th}>Status</th>
               <th style={styles.th}>Business</th>
+              <th style={styles.th}>Tenant</th>
               <th style={styles.th}>Stage</th>
               <th style={styles.th}>Spec Summary</th>
               <th style={styles.th}>Started</th>
@@ -245,6 +246,7 @@ export function SessionsView() {
                   <span style={styles.badge(s.status)}>{s.status ?? "unknown"}</span>
                 </td>
                 <td style={{ ...styles.td, fontWeight: 600 }}>{s.businessName ?? "—"}</td>
+                <td style={{ ...styles.td, color: "#8B949E", fontSize: 11, fontFamily: "monospace" }}>{s.tenantId ?? "—"}</td>
                 <td style={{ ...styles.td, color: "#8B949E" }}>{s.stage ?? "—"}</td>
                 <td style={styles.td}>
                   <SpecSummary session={s} />
