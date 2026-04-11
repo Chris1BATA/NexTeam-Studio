@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchAgentSessions } from "../services/adminFirestore";
+import { fetchAgentSessions } from "../services/adminfirestore.js";
 
 const SPEC_FIELDS = [
   "businessName",
@@ -199,11 +199,11 @@ export function SessionsView() {
           <h1 style={styles.title}>Lead Sessions</h1>
         </div>
         <button type="button" style={styles.refreshBtn} onClick={() => void load()}>
-          ↻ Refresh
+          Refresh
         </button>
       </div>
 
-      {error ? <div style={styles.error}>⚠ {error}</div> : null}
+      {error ? <div style={styles.error}>Error: {error}</div> : null}
 
       {!loading && (
         <div style={styles.stats}>
@@ -223,7 +223,7 @@ export function SessionsView() {
       )}
 
       {loading ? (
-        <div style={styles.emptyState}>Loading sessions…</div>
+        <div style={styles.emptyState}>Loading sessions...</div>
       ) : sessions.length === 0 ? (
         <div style={styles.emptyState}>No sessions yet. Start a conversation to see data here.</div>
       ) : (
@@ -259,7 +259,7 @@ export function SessionsView() {
                   {formatDate(s.updatedAt)}
                 </td>
                 <td style={{ ...styles.td, color: "#6E7681", fontSize: 11, fontFamily: "monospace" }}>
-                  {s.sessionId?.slice(0, 8) ?? s.id?.slice(0, 8)}…
+                  {(s.sessionId?.slice(0, 8) ?? s.id?.slice(0, 8)) + "..."}
                 </td>
               </tr>
             ))}

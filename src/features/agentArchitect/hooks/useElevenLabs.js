@@ -78,10 +78,9 @@ export function useElevenLabs() {
         await new Promise((resolve) => setTimeout(resolve, SENTENCE_GAP_MS));
         elapsedOffsetRef.current += SENTENCE_GAP_MS / 1000;
       }
-    } catch (err) {
+    } catch (_err) {
       amplitudeRef.current = 0;
       currentTimeRef.current = 0;
-      console.warn("[useElevenLabs] speak failed silently:", err);
     } finally {
       processingRef.current = false;
       amplitudeRef.current = 0;

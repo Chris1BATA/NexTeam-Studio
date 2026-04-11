@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { streamInterviewerTurn, extractPatch } from "../services/architectApi";
-import { applyAgentPatch, completeAgent } from "../services/firestoreSession";
+import { applyAgentPatch, completeAgent, fetchAgentSession } from "../services/firestoreSession";
 import AvatarPanel from "./AvatarPanel";
 import { Composer } from "./Composer";
 import SpecReviewPanel from "./SpecReviewPanel";
@@ -133,6 +133,24 @@ const shellStyles = {
     cursor: "pointer",
     boxShadow: "0 0 40px rgba(79,70,229,0.5)",
     transition: "opacity 0.2s ease, transform 0.2s ease"
+  },
+  reviewLoading: {
+    width: "100%",
+    maxWidth: "900px",
+    border: "1px solid #E5E7EB",
+    borderRadius: "20px",
+    background: "#ffffff",
+    padding: "32px",
+    color: "#374151"
+  },
+  reviewError: {
+    width: "100%",
+    maxWidth: "900px",
+    border: "1px solid #FECACA",
+    borderRadius: "20px",
+    background: "#FEF2F2",
+    padding: "32px",
+    color: "#991B1B"
   }
 };
 
@@ -149,6 +167,8 @@ export function AgentArchitectShell() {
   const [sessionId, setSessionId] = useState("");
   const [agentId, setAgentId] = useState("");
   const [draftPatch, setDraftPatch] = useState({});
+  const [savedAgentSpec, setSavedAgentSpec] = useState(null);
+  const [isLoadingSavedSpec, setIsLoadingSavedSpec] = useState(false);
   const [currentStage, setCurrentStage] = useState("name");
   const [latestAssistantText, setLatestAssistantText] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -190,9 +210,38 @@ export function AgentArchitectShell() {
     };
   }, [stop]);
 
+  useEffect(() => {
+    if (machineState !== "completed" || !sessionId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadSavedSpec() {
+      setIsLoadingSavedSpec(true);
+      try {
+        const saved = await fetchAgentSession(sessionId);
+        if (!cancelled && saved) {
+          setSavedAgentSpec(saved);
+          setDraftPatch((current) => ({ ...saved, ...current }));
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingSavedSpec(false);
+        }
+      }
+    }
+
+    void loadSavedSpec();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [machineState, sessionId]);
+
   async function handleStartConversation() {
     const greetingText = stripMarkdown(
-      "Hey there! I'm Nexi, your AI operations consultant at NexTeam-Studio. I help field service businesses build AI agents that run their day-to-day operations. Let's start with the basics — what's your business called?"
+      "Hey there! I'm Nexi from NexTeam-Studio. I help field service businesses design practical AI agents for the work they handle every day. Let's start with the basics — what's your business called?"
     );
 
     setVoiceEnabled(true);
@@ -277,10 +326,11 @@ export function AgentArchitectShell() {
 
         send({ type: "PATCH_EXTRACTED" });
         setCurrentStage(extracted.stage || "name");
-        setDraftPatch((current) => ({
-          ...current,
+        const mergedPatch = {
+          ...draftPatch,
           ...(extracted.patch || {})
-        }));
+        };
+        setDraftPatch(mergedPatch);
 
         await applyAgentPatch(
           agentId,
@@ -292,6 +342,8 @@ export function AgentArchitectShell() {
 
         if (assistantIndicatedCompletion || extracted.isComplete) {
           await completeAgent(agentId, sessionId);
+          const saved = await fetchAgentSession(sessionId);
+          setSavedAgentSpec(saved || mergedPatch);
           send({ type: "READY_TO_REVIEW" });
           send({ type: "COMPLETE" });
         } else {
@@ -337,7 +389,7 @@ export function AgentArchitectShell() {
             showWordHighlight={false}
           />
           <div style={shellStyles.splashTitle}>Meet Nexi</div>
-          <div style={shellStyles.splashSubtitle}>Your AI operations consultant</div>
+          <div style={shellStyles.splashSubtitle}>Your guide to building the right AI workflow for your business</div>
           <button
             type="button"
             onClick={() => void handleStartConversation()}
@@ -356,6 +408,9 @@ export function AgentArchitectShell() {
     );
   }
 
+  const reviewSpec = savedAgentSpec || draftPatch;
+  const hasReviewSpec = Boolean(reviewSpec && Object.keys(reviewSpec).length);
+
   return (
     <div style={shellStyles.page}>
       <div style={shellStyles.layout}>
@@ -368,10 +423,18 @@ export function AgentArchitectShell() {
         />
 
         {machineState === "completed" ? (
-          <SpecReviewPanel agentSpec={draftPatch} />
+          isLoadingSavedSpec && !hasReviewSpec ? (
+            <div style={shellStyles.reviewLoading}>Loading your blueprint…</div>
+          ) : hasReviewSpec ? (
+            <SpecReviewPanel agentSpec={reviewSpec} />
+          ) : (
+            <div style={shellStyles.reviewError}>
+              Your blueprint was completed, but we couldn’t load it into the review screen. Please refresh and try again.
+            </div>
+          )
         ) : (
           <div style={shellStyles.container}>
-            <h1 style={shellStyles.title}>Meet Nexi — Your AI Operations Consultant</h1>
+            <h1 style={shellStyles.title}>Meet Nexi — Build the right AI workflow for your business</h1>
 
             <div ref={chatContainerRef} style={shellStyles.messages}>
               {errorMessage ? (

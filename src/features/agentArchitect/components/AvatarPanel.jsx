@@ -15,8 +15,6 @@ export default function AvatarPanel({
   showDebugLabel = false,
   showWordHighlight = true
 }) {
-  console.log("[AvatarPanel] conversationState:", conversationState);
-
   const { rive, RiveComponent } = useRive({
     src,
     autoplay: true
@@ -24,12 +22,6 @@ export default function AvatarPanel({
   const [visualAmplitude, setVisualAmplitude] = useState(0);
   const [currentWord, setCurrentWord] = useState("");
   const spokenWordsRef = useRef([]);
-
-  useEffect(() => {
-    if (!rive) return;
-    console.log("[Rive] stateMachineNames:", rive.stateMachineNames);
-    console.log("[Rive] animationNames:", rive.animationNames);
-  }, [rive]);
 
   useEffect(() => {
     spokenWordsRef.current = (spokenText || "").split(/\s+/).filter(Boolean);
@@ -74,14 +66,9 @@ export default function AvatarPanel({
 
     const animationName = animationMap[isSpeaking ? "speaking" : conversationState] || "idle";
 
-    if (conversationState === "listening") {
-      console.log("[AvatarPanel] LISTENING TRIGGERED — animation:", animationName);
-    }
-
     try {
       rive.stop();
       rive.play(animationName);
-      console.log("[AvatarPanel] playing animation for:", conversationState, animationName);
     } catch (error) {
       console.warn("[AvatarPanel] could not play animation for:", conversationState, error);
     }

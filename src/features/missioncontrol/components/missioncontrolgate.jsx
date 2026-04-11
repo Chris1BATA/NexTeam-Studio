@@ -10,7 +10,7 @@
  */
 
 import { useState } from "react";
-import { NJORD_CONFIG } from "../config/njordConfig.js";
+import { NJORD_CONFIG } from "../config/njordconfig.js";
 
 const GATE_KEY = "njord_case_study_ack";
 

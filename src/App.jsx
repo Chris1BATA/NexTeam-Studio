@@ -18,12 +18,12 @@ const AdminGate = lazy(() =>
   }))
 );
 const NjordMissionControl = lazy(() =>
-  import("./features/missionControl/components/NjordMissionControl").then((module) => ({
+  import("./features/missioncontrol/components/njordmissioncontrol").then((module) => ({
     default: module.NjordMissionControl
   }))
 );
 const MissionControlGate = lazy(() =>
-  import("./features/missionControl/components/MissionControlGate").then((module) => ({
+  import("./features/missioncontrol/components/missioncontrolgate").then((module) => ({
     default: module.MissionControlGate
   }))
 );

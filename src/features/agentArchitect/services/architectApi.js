@@ -8,8 +8,9 @@ const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1000;
 
-// How many recent message pairs to keep for conversational continuity
-const RECENT_TURNS_TO_KEEP = 4; // 2 user + 2 assistant
+// How many recent messages to keep for conversational continuity
+const RECENT_TURNS_TO_KEEP = 3;
+const EXTRACTOR_MESSAGES_TO_KEEP = 5;
 
 function buildHeaders() {
   return {
@@ -55,14 +56,12 @@ async function fetchWithRetry(url, options) {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     if (attempt > 0) {
       const delayMs = RETRY_BASE_MS * Math.pow(2, attempt - 1);
-      console.warn(`[architectApi] rate-limit retry ${attempt}/${MAX_RETRIES} — waiting ${delayMs}ms`);
       await sleep(delayMs);
     }
     let response;
     try {
       response = await fetch(url, options);
-    } catch (networkErr) {
-      console.error("[architectApi] network error:", networkErr.message);
+    } catch (_networkErr) {
       lastParsed = { isRateLimit: false, status: 0 };
       continue;
     }
@@ -87,17 +86,32 @@ async function fetchWithRetry(url, options) {
 // ---------------------------------------------------------------------------
 
 function buildCompactMessages(fullMessages, draftPatch, currentStage) {
-  // Serialize only non-empty patch fields for state summary
-  const collectedFields = Object.entries(draftPatch || {})
-    .filter(([, v]) => v !== undefined && v !== null && v !== "" && !(Array.isArray(v) && v.length === 0))
+  const summaryFieldOrder = [
+    "businessName",
+    "trade",
+    "crewSize",
+    "jobVolume",
+    "serviceArea",
+    "biggestPain",
+    "existingTools",
+    "priorityAgent",
+    "agentName",
+    "confirmed"
+  ];
+
+  // Keep the interviewer state summary compact by excluding verbose derived fields
+  // like agentMission/recommendedAgents that are not needed on every turn.
+  const collectedFields = summaryFieldOrder
+    .map((key) => [key, draftPatch?.[key]])
+    .filter(([, v]) => v !== undefined && v !== null && v !== "" && !(Array.isArray(v) && v.length === 0) && v !== false)
     .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
     .join("\n");
 
   const stateSummary = [
-    `[Session state — do not repeat this to the user]`,
-    `Current stage: ${currentStage || "business_name"}`,
-    collectedFields ? `Already collected:\n${collectedFields}` : "Nothing collected yet.",
-    `Continue the conversation from where it left off. Ask only the next needed question.`
+    `[Internal state — do not reveal]`,
+    `stage=${currentStage || "business_name"}`,
+    collectedFields ? `known:\n${collectedFields}` : "known: none",
+    `Ask only the next needed question.`
   ].join("\n");
 
   // Keep only the last N messages for recent conversational context
@@ -139,13 +153,6 @@ export async function streamInterviewerTurn(
   currentStage = "business_name"
 ) {
   const compactMessages = buildCompactMessages(fullMessages, draftPatch, currentStage);
-
-  // Step 4/8: lightweight token logging
-  const fullSize = JSON.stringify(fullMessages).length;
-  const compactSize = JSON.stringify(compactMessages).length;
-  console.log(
-    `[architectApi] turn | stage: ${currentStage} | full msgs: ${fullMessages.length} (${Math.round(fullSize / 4)} tok) | compact: ${compactMessages.length} msgs (${Math.round(compactSize / 4)} tok) | saved: ~${Math.round((fullSize - compactSize) / 4)} tok`
-  );
 
   const requestBody = JSON.stringify({
     model: ANTHROPIC_MODEL,
@@ -208,8 +215,7 @@ export async function streamInterviewerTurn(
       if (done) break;
     }
     onComplete();
-  } catch (streamErr) {
-    console.error("[architectApi] stream read error:", streamErr.message);
+  } catch {
     const err = new Error("Nexi lost connection mid-reply. Please try again.");
     err.isFriendly = true;
     onError(err);
@@ -222,16 +228,12 @@ export async function streamInterviewerTurn(
 
 export async function extractPatch(fullTranscript, draftPatch = {}) {
   // Only send recent turns + current patch state — not full history
-  const recentTranscript = fullTranscript.slice(-6);
+  const recentTranscript = fullTranscript.slice(-EXTRACTOR_MESSAGES_TO_KEEP);
   const payload = {
     recentTranscript,
     currentPatch: draftPatch
   };
   const contextStr = JSON.stringify(payload);
-
-  console.log(
-    `[architectApi] extractor | recent msgs: ${recentTranscript.length}/${fullTranscript.length} | chars: ${contextStr.length} | est tokens: ~${Math.round(contextStr.length / 4)}`
-  );
 
   try {
     const response = await fetch(ANTHROPIC_API_URL, {
@@ -239,7 +241,7 @@ export async function extractPatch(fullTranscript, draftPatch = {}) {
       headers: buildHeaders(),
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
-        max_tokens: 600,
+        max_tokens: 300,
         stream: false,
         system: EXTRACTOR_SYSTEM_PROMPT,
         messages: [{ role: "user", content: contextStr }]
@@ -247,7 +249,6 @@ export async function extractPatch(fullTranscript, draftPatch = {}) {
     });
 
     if (!response.ok) {
-      console.warn(`[architectApi] extractPatch non-ok: ${response.status}`);
       return null;
     }
 
@@ -258,8 +259,7 @@ export async function extractPatch(fullTranscript, draftPatch = {}) {
     } catch {
       return null;
     }
-  } catch (err) {
-    console.error("[architectApi] extractPatch error:", err.message);
+  } catch {
     return null;
   }
 }

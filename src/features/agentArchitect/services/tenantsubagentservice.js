@@ -20,7 +20,7 @@ import {
   getDocs,
   serverTimestamp
 } from "firebase/firestore";
-import { getDefaultSubagents } from "../config/subagentRoster.js";
+import { getDefaultSubagents } from "../config/subagentroster.js";
 
 /**
  * Initialize a new tenant with their default subagent set.

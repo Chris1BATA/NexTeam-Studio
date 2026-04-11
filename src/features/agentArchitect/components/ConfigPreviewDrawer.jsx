@@ -24,7 +24,7 @@ export function ConfigPreviewDrawer({ draftPatch = {} }) {
   return (
     <section style={styles.card}>
       <h2 style={styles.title}>Draft Blueprint Data</h2>
-      <pre style={styles.pre}>{hasData ? JSON.stringify(draftPatch, null, 2) : "No captured data yet."}</pre>
+      <pre style={styles.pre}>{hasData ? JSON.stringify(draftPatch, null, 2) : "Nexi will start building this blueprint as details come in."}</pre>
     </section>
   );
 }

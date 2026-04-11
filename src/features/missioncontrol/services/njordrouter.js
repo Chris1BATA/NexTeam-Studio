@@ -9,8 +9,8 @@
  *   Replace each handler body with a real LLM call or tool invocation.
  */
 
-import { getNorseAgentsForIntent } from "../config/norseRoster.js";
-import { logNjordTurn } from "./njordSessionLogger.js";
+import { getNorseAgentsForIntent } from "../config/norseroster.js";
+import { logNjordTurn } from "./njordsessionlogger.js";
 
 /**
  * @typedef {Object} RouteResult

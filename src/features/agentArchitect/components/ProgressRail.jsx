@@ -1,4 +1,4 @@
-import { STAGES } from "../constants/stages";
+import { STAGES, STAGE_LABELS } from "../constants/stages";
 
 const styles = {
   rail: {
@@ -14,19 +14,19 @@ const styles = {
     color: active ? "#4338CA" : complete ? "#166534" : "#6B7280",
     border: `1px solid ${active ? "#C7D2FE" : "#E5E7EB"}`,
     fontSize: 13,
-    fontWeight: active ? 700 : 500
+    fontWeight: active ? 700 : 500,
+    textTransform: "none"
   })
 };
 
-export function ProgressRail({ currentStage = STAGES.BUSINESS_NAME }) {
-  const stageList = Object.values(STAGES);
-  const currentIndex = stageList.indexOf(currentStage);
+export function ProgressRail({ currentStage = STAGES[0] }) {
+  const currentIndex = STAGES.indexOf(currentStage);
 
   return (
     <div style={styles.rail}>
-      {stageList.map((stage, index) => (
+      {STAGES.map((stage, index) => (
         <div key={stage} style={styles.item(index === currentIndex, index < currentIndex)}>
-          {stage.replaceAll("_", " ")}
+          {STAGE_LABELS[stage] ?? stage}
         </div>
       ))}
     </div>

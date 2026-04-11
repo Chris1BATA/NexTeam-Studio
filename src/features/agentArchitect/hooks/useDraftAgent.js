@@ -1,4 +1,7 @@
-export function useDraftAgent() {
-  // TODO: expose draft agent config state and synchronization helpers.
-  return null;
+export function useDraftAgent(initialDraft = {}) {
+  return {
+    draft: initialDraft,
+    setDraft: () => {},
+    resetDraft: () => {}
+  };
 }

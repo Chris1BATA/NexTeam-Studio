@@ -89,7 +89,6 @@ export async function stopSpeaking() {
 
 export async function speakText(text, onAmplitude, onDone, onTimeUpdate) {
   await stopSpeaking();
-  console.log("[ElevenLabs] requesting TTS for text length:", text.length);
 
   const response = await fetch(ELEVENLABS_STREAM_URL, {
     method: "POST",
@@ -139,9 +138,7 @@ export async function speakText(text, onAmplitude, onDone, onTimeUpdate) {
     }
   }
 
-  console.log("[ElevenLabs] received audio chunks:", chunks.length);
   const audioBlob = new Blob(chunks, { type: "audio/mpeg" });
-  console.log("[ElevenLabs] audio blob size:", audioBlob.size);
   objectUrl = URL.createObjectURL(audioBlob);
 
   audioElement = new Audio(objectUrl);
@@ -170,9 +167,7 @@ export async function speakText(text, onAmplitude, onDone, onTimeUpdate) {
 
   startAmplitudeLoop(onAmplitude, onTimeUpdate);
 
-  console.log("[ElevenLabs] attempting audio playback");
   await audioElement.play();
-  console.log("[ElevenLabs] audio playback started");
 
   await donePromise;
   await stopSpeaking();

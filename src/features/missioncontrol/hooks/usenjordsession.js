@@ -11,9 +11,9 @@
  */
 
 import { useCallback, useRef, useState } from "react";
-import { classifyIntent } from "../services/njordIntentClassifier.js";
-import { routeToNorseAgent } from "../services/njordRouter.js";
-import { initNjordSession, logNjordTurn, closeNjordSession } from "../services/njordSessionLogger.js";
+import { classifyIntent } from "../services/njordintentclassifier.js";
+import { routeToNorseAgent } from "../services/njordrouter.js";
+import { initNjordSession, logNjordTurn, closeNjordSession } from "../services/njordsessionlogger.js";
 
 /**
  * @typedef {Object} NjordMessage

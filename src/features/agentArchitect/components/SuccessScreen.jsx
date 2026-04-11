@@ -137,7 +137,7 @@ export default function SuccessScreen() {
         <div style={successStyles.step}>
           <div style={successStyles.stepNumber}>1</div>
           <p style={successStyles.stepText}>
-            <span style={successStyles.stepBold}>Within 24 hours</span> — you'll receive your custom Agent Blueprint PDF: a full operational plan built around your business, your team, and your workflow.
+            <span style={successStyles.stepBold}>Next up</span> — we’ll prepare your custom Agent Blueprint PDF: a practical operational plan built around your business, your team, and your workflow.
           </p>
         </div>
 
@@ -162,7 +162,7 @@ export default function SuccessScreen() {
         </a>
       ) : (
         <p style={{ ...successStyles.footer, color: "#9CA3AF", fontSize: 15 }}>
-          Our team will reach out within 24 hours to schedule your setup call.
+          Our team will follow up to schedule your setup call.
         </p>
       )}
 

@@ -18,7 +18,7 @@ import {
   serverTimestamp,
   getDoc,
 } from "firebase/firestore";
-import { NJORD_CONFIG } from "../config/njordConfig.js";
+import { NJORD_CONFIG } from "../config/njordconfig.js";
 
 const _initializedSessions = new Set();
 

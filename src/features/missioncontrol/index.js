@@ -5,8 +5,8 @@
  * Route: /mission-control  (AdminGate + MissionControlGate protected)
  */
 
-export { NjordMissionControl } from "./components/NjordMissionControl.jsx";
-export { MissionControlGate } from "./components/MissionControlGate.jsx";
-export { useNjordSession } from "./hooks/useNjordSession.js";
-export { NJORD_CONFIG, isCaseStudyMode } from "./config/njordConfig.js";
-export { NORSE_ROSTER } from "./config/norseRoster.js";
+export { NjordMissionControl } from "./components/njordmissioncontrol.jsx";
+export { MissionControlGate } from "./components/missioncontrolgate.jsx";
+export { useNjordSession } from "./hooks/usenjordsession.js";
+export { NJORD_CONFIG, isCaseStudyMode } from "./config/njordconfig.js";
+export { NORSE_ROSTER } from "./config/norseroster.js";

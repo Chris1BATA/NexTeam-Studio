@@ -168,18 +168,17 @@ export default function SpecReviewPanel({ agentSpec }) {
               window.location.href = `${paymentLink}?success_url=${successUrl}&cancel_url=${cancelUrl}`;
             }}
           >
-            Build My Agent — $197
+            Continue to Setup — $197
           </button>
         ) : (
           <button
             type="button"
             style={reviewStyles.primaryButton}
             onClick={() => {
-              // Fallback: scroll to contact or show next step
-              window.alert("Our team will be in touch shortly to finalize your agent setup.");
+              window.alert("Thanks — your blueprint is ready. Our team will follow up with the next step for your agent setup.");
             }}
           >
-            Get Started →
+            See Next Step
           </button>
         )}
         <button type="button" style={reviewStyles.secondaryButton} onClick={() => window.location.reload()}>

@@ -25,7 +25,7 @@ import {
   addDoc,
   getDoc,
 } from "firebase/firestore";
-import { NJORD_CONFIG, isCaseStudyMode } from "../config/njordConfig.js";
+import { NJORD_CONFIG, isCaseStudyMode } from "../config/njordconfig.js";
 
 /**
  * Campaign lifecycle stages:

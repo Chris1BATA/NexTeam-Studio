@@ -78,7 +78,6 @@ export function Composer({ onSend, isSpeaking, onBarge }) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      console.warn("[Composer] Speech recognition is not supported in this browser.");
       return;
     }
 
@@ -123,9 +122,8 @@ export function Composer({ onSend, isSpeaking, onBarge }) {
       setIsListening(false);
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = () => {
       setIsListening(false);
-      console.warn("[Composer] Speech recognition error:", event.error);
     };
 
     recognition.start();
@@ -156,7 +154,7 @@ export function Composer({ onSend, isSpeaking, onBarge }) {
         value={input}
         onChange={(event) => setInput(event.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Type or speak your message..."
+        placeholder="Tell Nexi about your business or tap the mic"
         style={composerStyles.input}
       />
       <button type="button" onClick={handleSubmit} style={composerStyles.sendButton}>
@@ -173,7 +171,7 @@ export function Composer({ onSend, isSpeaking, onBarge }) {
       >
         🎤
       </button>
-      <div style={composerStyles.status}>{isListening ? "Listening..." : ""}</div>
+      <div style={composerStyles.status}>{isListening ? "Listening now" : ""}</div>
     </div>
   );
 }
