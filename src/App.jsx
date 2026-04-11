@@ -17,6 +17,16 @@ const AdminGate = lazy(() =>
     default: module.AdminGate
   }))
 );
+const NjordMissionControl = lazy(() =>
+  import("./features/missionControl/components/NjordMissionControl").then((module) => ({
+    default: module.NjordMissionControl
+  }))
+);
+const MissionControlGate = lazy(() =>
+  import("./features/missionControl/components/MissionControlGate").then((module) => ({
+    default: module.MissionControlGate
+  }))
+);
 
 function RouteFallback() {
   return (
@@ -48,6 +58,17 @@ export function App() {
           element={
             <AdminGate>
               <SessionsView />
+            </AdminGate>
+          }
+        />
+        {/* Aquatrace case-study Mission Control — gated by AdminGate + MissionControlGate */}
+        <Route
+          path="/mission-control"
+          element={
+            <AdminGate>
+              <MissionControlGate>
+                <NjordMissionControl />
+              </MissionControlGate>
             </AdminGate>
           }
         />

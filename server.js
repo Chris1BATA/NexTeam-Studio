@@ -10,6 +10,8 @@ const PORT = process.env.PORT || 4173;
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
 
 app.use(express.json({ limit: "2mb" }));
 
@@ -99,6 +101,63 @@ app.post("/elevenlabs/v1/text-to-speech/:voiceId/stream", async (req, res) => {
   } catch (err) {
     console.error("[proxy/elevenlabs] error:", err.message);
     res.status(502).json({ error: "Upstream ElevenLabs request failed." });
+  }
+});
+
+// Njord test-email endpoint — POST /api/njord/send-test-email
+// Sends a single test/review email to the configured test address.
+// ONLY used for case-study operator review — never sends to the full list.
+app.post("/api/njord/send-test-email", async (req, res) => {
+  if (!RESEND_API_KEY) {
+    return res.status(500).json({ ok: false, error: "RESEND_API_KEY not configured on the server." });
+  }
+
+  const { campaignId, subject, html, toAddress } = req.body || {};
+
+  if (!campaignId || !subject || !html || !toAddress) {
+    return res.status(400).json({ ok: false, error: "Missing required fields: campaignId, subject, html, toAddress." });
+  }
+
+  // Safety: this endpoint may only send to the configured test email.
+  // Reject any attempt to send to a different address via this route.
+  const allowedTo = process.env.VITE_NJORD_TEST_EMAIL || "";
+  if (!allowedTo) {
+    return res.status(500).json({ ok: false, error: "VITE_NJORD_TEST_EMAIL not configured. Set it in Railway env vars." });
+  }
+  if (toAddress.toLowerCase().trim() !== allowedTo.toLowerCase().trim()) {
+    return res.status(403).json({
+      ok: false,
+      error: `Test email may only be sent to the configured test address. Received: ${toAddress}`
+    });
+  }
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: RESEND_FROM_EMAIL,
+        to: [toAddress],
+        subject: `[Njord Test Review] ${subject}`,
+        html
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("[njord/send-test-email] Resend error:", data);
+      return res.status(502).json({ ok: false, error: data?.message || "Resend API error.", detail: data });
+    }
+
+    console.log(`[njord/send-test-email] ✅ test email sent — campaignId: ${campaignId} to: ${toAddress} resendId: ${data.id}`);
+    return res.json({ ok: true, resendId: data.id, to: toAddress });
+  } catch (err) {
+    console.error("[njord/send-test-email] fetch error:", err.message);
+    return res.status(502).json({ ok: false, error: err.message });
   }
 });
 
