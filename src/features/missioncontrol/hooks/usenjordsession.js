@@ -94,11 +94,17 @@ export function useNjordSession(sessionId) {
           intent: classification.intent,
         });
 
-        // Route to appropriate Norse subagent
+        // Route to appropriate Norse subagent (pass recent turns for context)
+        const recentTurns = messages
+          .filter((m) => m.role === "user" || m.role === "agent")
+          .slice(-6)
+          .map((m) => ({ role: m.role === "agent" ? "assistant" : "user", content: m.content }));
+
         const result = await routeToNorseAgent(
           sessionRef.current,
           classification.intent,
-          userInput
+          userInput,
+          recentTurns
         );
 
         // Add agent response to UI

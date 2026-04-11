@@ -17,15 +17,24 @@ layer pattern: one host agent (Njord) routing to five specialist subagents.
 
 ---
 
-## Route
+## Routes
 
 ```
 /mission-control
+/mission-control/aquatrace-case-study
 ```
 
 Protected by:
-1. `AdminGate` (password via `VITE_ADMIN_PASSWORD`)
-2. `MissionControlGate` (one-time case-study acknowledgment, session-scoped)
+1. `AdminGate` on both routes
+2. `MissionControlGate` on the Aquatrace case-study route only
+
+`/mission-control` is now the shared Mission Control landing page. It reads tenant records
+from Firestore `tenants/*` and shows only clients where:
+- `registryVisible !== false`
+- `missionControlEnabled === true`
+
+If the shared registry does not yet contain the Aquatrace case-study tenant, the landing page
+still injects the Njord case-study card so the approved reference implementation remains visible.
 
 ---
 
@@ -93,6 +102,7 @@ src/features/missionControl/
 | Voice output (TTS)            | 🔶 Stub      | `speakResponse` present; wire ElevenLabs |
 | Campaign state machine        | ✅ Wired     | Full lifecycle + 2-confirm in Firestore  |
 | Test email actual delivery    | ✅ Wired     | Calls `/api/njord/send-test-email` → Resend |
+| Shared client registry view   | ✅ Wired     | `/mission-control` reads Firestore tenant state |
 | Full-list send                | 🔒 Locked    | Always sandbox in case-study mode        |
 
 ---
