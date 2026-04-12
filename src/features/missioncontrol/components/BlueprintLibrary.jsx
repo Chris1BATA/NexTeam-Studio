@@ -1,5 +1,5 @@
 /**
- * Blueprint Library — browse blueprints, preview details, instantiate client from blueprint.
+ * Blueprint Library — browse blueprints, preview details, Set Up Client Workspace.
  */
 
 import { useState } from "react";
@@ -171,12 +171,12 @@ function InstantiateModal({ blueprint, onClose, onInstantiate }) {
     <div style={S.modal} onClick={onClose}>
       <div style={S.modalPanel} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ margin: "0 0 16px 0", color: "#F1F5F9", fontSize: 17 }}>
-          Instantiate Client from Blueprint
+          Set Up Client Workspace
         </h3>
         <p style={{ fontSize: 13, color: "#64748B", marginBottom: 20 }}>
           Blueprint: <strong style={{ color: "#10B981" }}>{blueprint.name}</strong>
           <br />
-          This will create a live onboarding session for the new client.
+          This will start onboarding tasks for this client.
         </p>
 
         {!result ? (
@@ -214,7 +214,7 @@ function InstantiateModal({ blueprint, onClose, onInstantiate }) {
               <>
                 <div style={{ color: "#86EFAC", fontSize: 14, marginBottom: 12 }}>
                   ✓ Onboarding session created for <strong>{clientName}</strong>.
-                  {result._localOnly ? " (in-memory only — Firestore unavailable)" : ""}
+                  {result._localOnly ? " (saved locally)" : ""}
                 </div>
                 <div style={{ fontSize: 12, color: "#64748B", marginBottom: 16 }}>
                   Session ID: {result.session?.id}
@@ -321,15 +321,15 @@ export function BlueprintLibrary() {
       {toastMsg && <div style={S.toast}>{toastMsg}</div>}
 
       <div style={S.header}>
-        <span style={S.badge}>BLUEPRINT</span>
-        <h2 style={S.title}>Blueprint Library</h2>
+        <span style={S.badge}>TEMPLATE</span>
+        <h2 style={S.title}>Agent Setup Templates</h2>
       </div>
 
-      {loading && <div style={S.emptyState}>Loading blueprints...</div>}
+      {loading && <div style={S.emptyState}>Loading templates...</div>}
       {error && <div style={{ ...S.emptyState, color: "#FCA5A5" }}>Error: {error}</div>}
 
       {!loading && !error && blueprints.length === 0 && (
-        <div style={S.emptyState}>No blueprints found.</div>
+        <div style={S.emptyState}>No templates found.</div>
       )}
 
       {!loading && !error && blueprints.length > 0 && (

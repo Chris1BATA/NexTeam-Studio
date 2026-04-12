@@ -138,7 +138,7 @@ function TaskCard({ task, onComplete, onSkip, onBlock, onStart }) {
       <div style={{ flex: 1 }}>
         <div style={S.taskTitle}>{task.title}</div>
         {task.description && <div style={S.taskDesc}>{task.description}</div>}
-        {task.sopTitle && <div style={S.taskSOP}>SOP: {task.sopTitle}</div>}
+        {task.sopTitle && <div style={S.taskSOP}>Playbook: {task.sopTitle}</div>}
         {task.state === ONBOARDING_TASK_STATES.BLOCKED && task.blockedReason && (
           <div style={S.taskBlocked}>⚠ Blocked: {task.blockedReason}</div>
         )}
@@ -222,7 +222,7 @@ function SessionDetail({ session, onAction }) {
           {session.clientName || session.clientId}
         </div>
         <div style={{ fontSize: 12, color: "#64748B", marginBottom: 8 }}>
-          Blueprint: {session.blueprintName || session.blueprintId}
+          Template: {session.blueprintName || session.blueprintId}
           {" · "}State: {session.state}
         </div>
         <ProgressRing value={progress} />
@@ -300,7 +300,7 @@ export function OnboardingChecklist() {
             {sessions.length === 0 ? (
               <div style={S.emptyState}>
                 No onboarding sessions found.<br /><br />
-                Instantiate a client from the Blueprint Library to create one.
+                Set up a client from the Agent Setup Templates to create one.
               </div>
             ) : (
               sessions.map((session) => {

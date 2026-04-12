@@ -167,7 +167,7 @@ const S = {
 };
 
 const AI_DRAFT_PROMPT_HINT =
-  "Describe the SOP in plain language (e.g. 'How we handle emergency water calls from first contact to technician dispatch'). An AI draft will scaffold the steps.";
+  "Describe the playbook in plain language (e.g. 'How we handle emergency water calls from first contact to technician dispatch'). An AI draft will scaffold the steps.";
 
 function StepEditor({ step, index, onChange, onRemove }) {
   function update(key, value) {
@@ -357,8 +357,8 @@ No extra text. Just the JSON object.`,
       {toastMsg && <div style={S.toast}>{toastMsg}</div>}
 
       <div style={S.header}>
-        <span style={S.badge}>SOP</span>
-        <h2 style={S.title}>{isEdit ? `Edit: ${draft.title || "Untitled"}` : "New SOP"}</h2>
+        <span style={S.badge}>PLAYBOOK</span>
+        <h2 style={S.title}>{isEdit ? `Edit: ${draft.title || "Untitled"}` : "New Playbook"}</h2>
       </div>
 
       <div style={S.form}>
@@ -381,7 +381,7 @@ No extra text. Just the JSON object.`,
               style={S.textarea}
               value={draft.description}
               onChange={(e) => updateField("description", e.target.value)}
-              placeholder="What does this SOP accomplish?"
+              placeholder="What does this playbook accomplish?"
               rows={3}
             />
           </div>
@@ -473,7 +473,7 @@ No extra text. Just the JSON object.`,
         {/* Action Buttons */}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <button type="button" style={S.primaryBtn} onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : isEdit ? "Update SOP" : "Create SOP"}
+            {saving ? "Saving…" : isEdit ? "Update Playbook" : "Create Playbook"}
           </button>
           {typeof onCancel === "function" && (
             <button type="button" style={S.secondaryBtn} onClick={onCancel}>

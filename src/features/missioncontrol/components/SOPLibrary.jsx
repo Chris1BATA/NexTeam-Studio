@@ -222,7 +222,7 @@ function SOPDetail({ sop, onClose, onTransition }) {
     <div style={S.detailOverlay} onClick={onClose}>
       <div style={S.detailPanel} onClick={(e) => e.stopPropagation()}>
         <button type="button" style={S.closeBtn} onClick={onClose}>✕</button>
-        <div style={{ ...S.badge, display: "inline-block", marginBottom: 14 }}>SOP</div>
+        <div style={{ ...S.badge, display: "inline-block", marginBottom: 14 }}>PLAYBOOK</div>
         <h2 style={{ ...S.title, marginBottom: 6 }}>{sop.title}</h2>
         <div style={{ fontSize: 12, color: "#64748B", marginBottom: 16 }}>
           {sop.category} · State: {sop.state} · Version {sop.version}
@@ -303,13 +303,13 @@ export function SOPLibrary({ onCreateNew }) {
 
   async function handleTransitionWithFeedback(sopId, action) {
     const result = await handleTransition(sopId, action);
-    if (result.ok) showToast(`SOP ${action} successful.${result.seeded ? " (seed record — no DB write)" : ""}`);
+    if (result.ok) showToast(`Playbook ${action} successful.`);
     else showToast(`Error: ${result.errors?.join(", ")}`);
   }
 
   async function handleDuplicateWithFeedback(sopId) {
     const result = await handleDuplicate(sopId);
-    if (result.ok) showToast("SOP duplicated successfully.");
+    if (result.ok) showToast("Playbook duplicated successfully.");
     else showToast(`Error: ${result.errors?.join(", ")}`);
   }
 
@@ -326,11 +326,11 @@ export function SOPLibrary({ onCreateNew }) {
       )}
 
       <div style={S.header}>
-        <span style={S.badge}>SOP</span>
-        <h2 style={S.title}>SOP Library</h2>
+        <span style={S.badge}>PLAYBOOK</span>
+        <h2 style={S.title}>Playbooks</h2>
         {typeof onCreateNew === "function" && (
           <button type="button" style={{ ...S.primaryBtn, marginLeft: "auto" }} onClick={onCreateNew}>
-            + New SOP
+            + New Playbook
           </button>
         )}
       </div>
@@ -364,11 +364,11 @@ export function SOPLibrary({ onCreateNew }) {
         </select>
       </div>
 
-      {loading && <div style={S.emptyState}>Loading SOPs...</div>}
+      {loading && <div style={S.emptyState}>Loading playbooks...</div>}
       {error && <div style={{ ...S.emptyState, color: "#FCA5A5" }}>Error: {error}</div>}
 
       {!loading && !error && sops.length === 0 && (
-        <div style={S.emptyState}>No SOPs found. Create your first SOP to get started.</div>
+        <div style={S.emptyState}>No playbooks found. Create your first playbook to get started.</div>
       )}
 
       {!loading && !error && sops.length > 0 && (
