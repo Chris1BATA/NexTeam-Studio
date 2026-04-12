@@ -85,13 +85,12 @@ export function App() {
         />
 
         {/* Aquatrace workspace — canonical URL; Njord is tab #1 (Chat) */}
+        {/* MissionControlGate removed: Aquatrace is a real NexTeam client; direct Njord access from workspace is approved */}
         <Route
           path="/mission-control/aquatrace/workspace"
           element={
             <AdminGate>
-              <MissionControlGate>
-                <NjordShell />
-              </MissionControlGate>
+              <NjordShell />
             </AdminGate>
           }
         />
