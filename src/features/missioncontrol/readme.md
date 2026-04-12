@@ -1,4 +1,4 @@
-# Mission Control — Njord Scaffold
+﻿# Mission Control — Njord Scaffold
 
 **Aquatrace Case Study #1 · NexTeam-Studio**
 
@@ -70,7 +70,7 @@ See `njordCampaignService.js` for the full state machine.
 ## Files
 
 ```
-src/features/missionControl/
+src/features/missioncontrol/
   config/
     njordConfig.js          Tenant config, case-study flags, collection names
     norseRoster.js          Norse agent definitions + intent routing

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SOP Service — reads/writes SOPs for a tenant.
  * Falls back to SEED_SOPS when Firestore returns empty or errors.
  */

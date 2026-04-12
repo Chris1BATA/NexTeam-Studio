@@ -1,4 +1,4 @@
-/**
+﻿/**
  * useNjordSession — React Hook
  *
  * Core session handler for the Njord host agent.
@@ -11,9 +11,9 @@
  */
 
 import { useCallback, useRef, useState } from "react";
-import { classifyIntent } from "../services/njordintentclassifier.js";
-import { routeToNorseAgent } from "../services/njordrouter.js";
-import { initNjordSession, logNjordTurn, closeNjordSession } from "../services/njordsessionlogger.js";
+import { classifyIntent } from "../services/njordIntentClassifier.js";
+import { routeToNorseAgent } from "../services/njordRouter.js";
+import { initNjordSession, logNjordTurn, closeNjordSession } from "../services/njordSessionLogger.js";
 
 /**
  * @typedef {Object} NjordMessage

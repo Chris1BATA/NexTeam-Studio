@@ -1,4 +1,4 @@
-/**
+﻿/**
  * NjordMissionControl — Mission Control UI Shell
  *
  * The primary interface for the Aquatrace case-study agent session.
@@ -9,8 +9,8 @@
  */
 
 import { useCallback, useRef, useState } from "react";
-import { useNjordSession } from "../hooks/usenjordsession.js";
-import { NJORD_CONFIG, isCaseStudyMode } from "../config/njordconfig.js";
+import { useNjordSession } from "../hooks/useNjordSession.js";
+import { NJORD_CONFIG, isCaseStudyMode } from "../config/njordConfig.js";
 
 function generateSessionId() {
   return `njord-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

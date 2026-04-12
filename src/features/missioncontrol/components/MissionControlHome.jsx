@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchMissionControlClients } from "../services/missioncontrolregistry.js";
+import { fetchMissionControlClients } from "../services/missionControlRegistry.js";
 
 const styles = {
   page: {

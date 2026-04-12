@@ -1,5 +1,5 @@
-/**
- * Blueprint Schema — NexTeam-Studio schema-first definition
+﻿/**
+ * Blueprint Schema â€” NexTeam-Studio schema-first definition
  * A blueprint is the template for a client's operational setup.
  * Instantiating a blueprint creates a client + onboarding flow.
  */
@@ -96,7 +96,7 @@ export function blueprintToPreviewText(blueprint) {
   if (blueprint.agentRoster && blueprint.agentRoster.length > 0) {
     lines.push("Agent Roster:");
     blueprint.agentRoster.forEach((agent) => {
-      lines.push(`  • ${agent.agentName} (${agent.role}) — ${agent.purpose}`);
+      lines.push(`  â€¢ ${agent.agentName} (${agent.role}) â€” ${agent.purpose}`);
     });
     lines.push("");
   }
@@ -134,3 +134,4 @@ export function validateBlueprint(blueprint) {
   if (!Object.values(BLUEPRINT_STATES).includes(blueprint.state)) errors.push("Invalid blueprint state.");
   return errors;
 }
+

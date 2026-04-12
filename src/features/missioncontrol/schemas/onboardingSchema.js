@@ -1,5 +1,5 @@
-/**
- * Onboarding Task/State Schema — NexTeam-Studio schema-first definition
+﻿/**
+ * Onboarding Task/State Schema â€” NexTeam-Studio schema-first definition
  * Live onboarding instance tied to a client + blueprint.
  */
 
@@ -100,7 +100,7 @@ export function instantiateOnboardingFromBlueprint(blueprint, clientInfo = {}) {
 }
 
 /**
- * Compute overall onboarding progress as a percentage (0–100).
+ * Compute overall onboarding progress as a percentage (0â€“100).
  * @param {OnboardingSession} session
  * @returns {number}
  */
@@ -130,13 +130,13 @@ export function onboardingSessionToPreviewText(session) {
   (session.tasks || []).forEach((task) => {
     const stateIcon =
       task.state === ONBOARDING_TASK_STATES.COMPLETE
-        ? "✓"
+        ? "âœ“"
         : task.state === ONBOARDING_TASK_STATES.SKIPPED
         ? "-"
         : task.state === ONBOARDING_TASK_STATES.BLOCKED
         ? "!"
         : task.state === ONBOARDING_TASK_STATES.IN_PROGRESS
-        ? "→"
+        ? "â†’"
         : " ";
     lines.push(`  [${stateIcon}] ${task.title}`);
     if (task.sopTitle) lines.push(`     SOP: ${task.sopTitle}`);
@@ -145,3 +145,4 @@ export function onboardingSessionToPreviewText(session) {
 
   return lines.join("\n");
 }
+

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AquatraceDashboard — Aquatrace Mission Control overview screen.
  *
  * The entry-point dashboard for the Aquatrace tenant.
@@ -9,7 +9,7 @@
  */
 
 import { Link } from "react-router-dom";
-import { NJORD_CONFIG, isCaseStudyMode } from "../config/njordconfig.js";
+import { NJORD_CONFIG, isCaseStudyMode } from "../config/njordConfig.js";
 
 const S = {
   page: {

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * MissionControlGate — Case-Study Access Control
  *
  * Wraps the Njord Mission Control in a case-study-specific acknowledgment gate.
@@ -10,7 +10,7 @@
  */
 
 import { useState } from "react";
-import { NJORD_CONFIG } from "../config/njordconfig.js";
+import { NJORD_CONFIG } from "../config/njordConfig.js";
 
 const GATE_KEY = "njord_case_study_ack";
 

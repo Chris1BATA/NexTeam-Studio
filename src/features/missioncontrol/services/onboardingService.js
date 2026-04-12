@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Onboarding Service — reads/writes live onboarding sessions.
  */
 
@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { NJORD_CONFIG } from "../config/njordConfig";
+import { SEED_ONBOARDING_SESSIONS } from "../data/aquatraceSeedData";
 import {
   onboardingSessionCollectionPath,
   onboardingSessionDocPath,
@@ -31,11 +32,25 @@ const COLLECTION = onboardingSessionCollectionPath(NJORD_CONFIG.tenantId);
 
 // ── reads ──────────────────────────────────────────
 
+function sessionSeedFallback(state) {
+  let sessions = (SEED_ONBOARDING_SESSIONS || []).map((s) => ({
+    ...s,
+    _seeded: true,
+    progress: computeOnboardingProgress(s),
+    humanReadablePreview: onboardingSessionToPreviewText(s)
+  }));
+  if (state) sessions = sessions.filter((s) => s.state === state);
+  return sessions;
+}
+
 export async function fetchOnboardingSessions({ state = null } = {}) {
   try {
     const q = query(collection(db, COLLECTION), orderBy("createdAt", "desc"));
     const snap = await getDocs(q);
     let sessions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (sessions.length === 0) {
+      return sessionSeedFallback(state);
+    }
     if (state) sessions = sessions.filter((s) => s.state === state);
     return sessions.map((s) => ({
       ...s,
@@ -43,11 +58,10 @@ export async function fetchOnboardingSessions({ state = null } = {}) {
       humanReadablePreview: onboardingSessionToPreviewText(s)
     }));
   } catch (error) {
-    console.warn("[onboardingService] fetchOnboardingSessions error:", error.message);
-    return [];
+    console.warn("[onboardingService] fetchOnboardingSessions fallback:", error.message);
+    return sessionSeedFallback(state);
   }
 }
-
 export async function fetchOnboardingSessionById(sessionId) {
   try {
     const path = onboardingSessionDocPath(NJORD_CONFIG.tenantId, sessionId);

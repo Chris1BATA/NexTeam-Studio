@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Njord Campaign Service — Buncombe-Style Workflow Scaffold
  *
  * Manages campaign workflow state for Aquatrace case-study outreach.
@@ -25,7 +25,7 @@ import {
   addDoc,
   getDoc,
 } from "firebase/firestore";
-import { NJORD_CONFIG, isCaseStudyMode } from "../config/njordconfig.js";
+import { NJORD_CONFIG, isCaseStudyMode } from "../config/njordConfig.js";
 
 /**
  * Campaign lifecycle stages:

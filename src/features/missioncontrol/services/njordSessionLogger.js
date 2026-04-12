@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Njord Session Logger — Mission Control
  *
  * Writes session events to Firestore under the njordSessions collection.
@@ -18,7 +18,7 @@ import {
   serverTimestamp,
   getDoc,
 } from "firebase/firestore";
-import { NJORD_CONFIG } from "../config/njordconfig.js";
+import { NJORD_CONFIG } from "../config/njordConfig.js";
 
 const _initializedSessions = new Set();
 

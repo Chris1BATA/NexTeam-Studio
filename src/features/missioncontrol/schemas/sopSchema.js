@@ -1,5 +1,5 @@
-/**
- * SOP Object Model — NexTeam-Studio schema-first definition
+﻿/**
+ * SOP Object Model â€” NexTeam-Studio schema-first definition
  * Human-readable preview: use sopToPreviewText()
  */
 
@@ -134,3 +134,4 @@ export function transitionSOPState(currentState, action) {
   };
   return transitions[currentState]?.[action] || null;
 }
+

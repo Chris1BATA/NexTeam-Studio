@@ -1,6 +1,6 @@
-import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
+﻿import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
 import { db } from "../../../firebase.js";
-import { NJORD_CONFIG } from "../config/njordconfig.js";
+import { NJORD_CONFIG } from "../config/njordConfig.js";
 
 function normalizeDate(value) {
   return value?.toDate?.()?.toISOString?.() ?? null;

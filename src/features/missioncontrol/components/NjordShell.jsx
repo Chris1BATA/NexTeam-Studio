@@ -4,13 +4,13 @@
  */
 
 import { useState } from "react";
-import { NjordMissionControl } from "./njordmissioncontrol";
-import { NjordSessionLog } from "./njordsessionlog";
-import { SOPLibrary } from "./soplibrary";
-import { SOPEditor } from "./sopeditor";
-import { BlueprintLibrary } from "./blueprintlibrary";
-import { OnboardingChecklist } from "./onboardingchecklist";
-import { NJORD_CONFIG, isCaseStudyMode } from "../config/njordconfig";
+import { NjordMissionControl } from "./NjordMissionControl";
+import { NjordSessionLog } from "./NjordSessionLog";
+import { SOPLibrary } from "./SOPLibrary";
+import { SOPEditor } from "./SOPEditor";
+import { BlueprintLibrary } from "./BlueprintLibrary";
+import { OnboardingChecklist } from "./OnboardingChecklist";
+import { NJORD_CONFIG, isCaseStudyMode } from "../config/njordConfig";
 
 const TABS = [
   { id: "chat", label: "Chat", icon: "💬" },

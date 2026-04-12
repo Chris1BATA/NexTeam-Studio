@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+﻿import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 const AgentArchitectShell = lazy(() =>
@@ -18,27 +18,27 @@ const AdminGate = lazy(() =>
   }))
 );
 const NjordMissionControl = lazy(() =>
-  import("./features/missioncontrol/components/njordmissioncontrol").then((module) => ({
+  import("./features/missioncontrol/components/NjordMissionControl").then((module) => ({
     default: module.NjordMissionControl
   }))
 );
 const NjordShell = lazy(() =>
-  import("./features/missioncontrol/components/njordshell").then((module) => ({
+  import("./features/missioncontrol/components/NjordShell").then((module) => ({
     default: module.NjordShell
   }))
 );
 const MissionControlGate = lazy(() =>
-  import("./features/missioncontrol/components/missioncontrolgate").then((module) => ({
+  import("./features/missioncontrol/components/MissionControlGate").then((module) => ({
     default: module.MissionControlGate
   }))
 );
 const AquatraceDashboard = lazy(() =>
-  import("./features/missioncontrol/components/aquatracedashboard").then((module) => ({
+  import("./features/missioncontrol/components/AquatraceDashboard").then((module) => ({
     default: module.AquatraceDashboard
   }))
 );
 const MissionControlHome = lazy(() =>
-  import("./features/missioncontrol/components/missioncontrolhome").then((module) => ({
+  import("./features/missioncontrol/components/MissionControlHome").then((module) => ({
     default: module.MissionControlHome
   }))
 );

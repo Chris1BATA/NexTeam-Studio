@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Blueprint Service — reads/writes blueprints for a tenant.
  * Falls back to SEED_BLUEPRINTS when Firestore returns empty or errors.
  */
@@ -111,7 +111,8 @@ export async function createBlueprint(bpData) {
 
 export async function updateBlueprint(blueprintId, patch) {
   try {
-    await updateDoc(doc(db, COLLECTION, blueprintId), {
+    const bpPath = blueprintDocPath(NJORD_CONFIG.tenantId, blueprintId);
+    await updateDoc(doc(db, bpPath), {
       ...patch,
       humanReadablePreview: null,
       updatedAt: serverTimestamp()

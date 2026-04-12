@@ -1,13 +1,13 @@
-/**
+﻿/**
  * Njord Router — Live Claude-backed Norse Subagents
  *
  * Routes a classified intent to the correct Norse subagent,
  * calls Claude with that agent's system prompt, and returns the response.
  */
 
-import { getNorseAgentsForIntent } from "../config/norseroster.js";
-import { logNjordTurn } from "./njordsessionlogger.js";
-import { callNorseAgent } from "./njordclaudeservice.js";
+import { getNorseAgentsForIntent } from "../config/norseRoster.js";
+import { logNjordTurn } from "./njordSessionLogger.js";
+import { callNorseAgent } from "./njordClaudeService.js";
 
 /**
  * @typedef {Object} RouteResult
