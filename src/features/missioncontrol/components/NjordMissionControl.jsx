@@ -206,7 +206,7 @@ export function NjordMissionControl() {
 
   const handleVoiceStub = useCallback(() => {
     // Voice hook stub - wire microphone input here
-    alert("Voice input stub. Wire a microphone/ASR integration here (e.g. browser SpeechRecognition or Deepgram).");
+    alert("Voice input is coming soon. Please type your message for now.");
   }, []);
 
   return (
@@ -222,9 +222,7 @@ export function NjordMissionControl() {
             </p>
           </div>
         </div>
-        <div style={{ fontSize: 12, color: "#475569" }}>
-          Session: {SESSION_ID.slice(-8)}
-        </div>
+        
       </div>
 
       {/* Body */}
@@ -257,7 +255,7 @@ export function NjordMissionControl() {
                 <div key={msg.id} style={{ ...styles.bubble, ...styles.agentBubble }}>
                   <div style={styles.agentLabel}>
                     {msg.agentName || "Njord"}
-                    {msg.stub && <span style={styles.stubTag}>stub</span>}
+                    
                   </div>
                   {msg.content}
                 </div>

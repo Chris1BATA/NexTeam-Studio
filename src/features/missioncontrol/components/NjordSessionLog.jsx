@@ -170,7 +170,7 @@ function SessionListItem({ session, active, onClick }) {
       </div>
       <div style={S.sessionMeta}>{clientLabel}</div>
       {session.intent && (
-        <div style={{ ...S.sessionMeta, color: "#94A3B8", marginTop: 2 }}>Intent: {session.intent}</div>
+        <div style={{ ...S.sessionMeta, color: "#94A3B8", marginTop: 2 }}>Topic: {session.intent}</div>
       )}
       <div style={{ ...S.sessionMeta, marginTop: 3 }}>
         {formatTimestamp(session.createdAt)}
@@ -248,10 +248,10 @@ export function NjordSessionLog() {
     <div style={S.page}>
       <div style={S.header}>
         <span style={S.badge}>NJORD</span>
-        <h2 style={S.title}>Session Log</h2>
+        <h2 style={S.title}>Conversation History</h2>
         <input
           style={S.searchBar}
-          placeholder="Search by session ID, client ID, status..."
+          placeholder="Search by ID, client, or status..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -286,9 +286,9 @@ export function NjordSessionLog() {
         {/* Event detail */}
         <div style={S.panel}>
           {!activeSession ? (
-            <div style={S.emptyState}>Select a session to view its event log.</div>
+            <div style={S.emptyState}>Select a conversation to view its messages.</div>
           ) : eventsLoading ? (
-            <div style={S.loading}>Loading events...</div>
+            <div style={S.loading}>Loading messages...</div>
           ) : (
             <>
               <div style={{ marginBottom: 16, paddingBottom: 14, borderBottom: "1px solid #1E293B" }}>
@@ -302,7 +302,7 @@ export function NjordSessionLog() {
                   <span style={{ color: "#64748B" }}>Client: <span style={{ color: "#94A3B8" }}>{activeSession.clientId || activeSession.tenantId || "—"}</span></span>
                   <span style={{ color: "#64748B" }}>Status: <span style={{ color: statusColor(activeSession.status) }}>{activeSession.status || "unknown"}</span></span>
                   {activeSession.intent && (
-                    <span style={{ color: "#64748B" }}>Intent: <span style={{ color: "#C4B5FD" }}>{activeSession.intent}</span></span>
+                    <span style={{ color: "#64748B" }}>Topic: <span style={{ color: "#C4B5FD" }}>{activeSession.intent}</span></span>
                   )}
                   {activeSession.caseStudyMode && (
                     <span style={{ color: "#EAB308" }}>🟡 case-study</span>
@@ -315,12 +315,12 @@ export function NjordSessionLog() {
                   )}
                 </div>
                 <div style={{ marginTop: 4, fontSize: 11, color: "#475569" }}>
-                  {events.length} events logged
+                  {events.length} messages logged
                 </div>
               </div>
 
               {events.length === 0 ? (
-                <div style={S.emptyState}>No events logged for this session.</div>
+                <div style={S.emptyState}>No messages recorded for this conversation.</div>
               ) : (
                 events.map((event) => {
                   const colors = eventColor(event.type);
@@ -330,7 +330,7 @@ export function NjordSessionLog() {
                     <div key={event.id} style={S.eventRow}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                         <span style={{ ...S.eventChip, background: colors.background, color: colors.color }}>
-                          {event.type}
+                          {event.type === 'intent-classification' ? 'Request classified' : event.type === 'routing' ? 'Assigned' : event.type === 'error' ? 'Issue logged' : event.type}
                         </span>
                         <span style={{ fontSize: 11, color: "#64748B" }}>{formatTimestamp(timestamp)}</span>
                         <button
@@ -362,8 +362,8 @@ export function NjordSessionLog() {
                       ) : null}
                       {event.type === "routing" ? (
                         <div style={{ fontSize: 13, color: "#C4B5FD" }}>
-                          Routed to: <strong>{event.agentName}</strong>
-                          {event.stub ? " (stub)" : ""}
+                          Assigned to: <strong>{event.agentName}</strong>
+                          {event.stub ? " (preview)" : ""}
                         </div>
                       ) : null}
                       {expanded && (

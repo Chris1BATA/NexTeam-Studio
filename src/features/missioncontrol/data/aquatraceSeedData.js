@@ -17,7 +17,7 @@ export const SEED_SOPS = [
     id: "sop-aquatrace-001",
     title: "New Customer Intake",
     description:
-      "Capture new customer inquiries from phone, web form, or text. Validate contact info, log service type, and route to the scheduling queue.",
+      "Capture new customer requests from any channel. Log the job type, validate contact info, and get it into the queue fast.",
     category: "intake",
     state: SOP_STATES.APPROVED,
     version: 1,
@@ -67,7 +67,7 @@ export const SEED_SOPS = [
     id: "sop-aquatrace-002",
     title: "Post-Service Follow-Up",
     description:
-      "After a service job is completed, trigger a follow-up message within 24 hours to confirm satisfaction and request a review.",
+      "After a job is done, automatically follow up within 24 hours to confirm the customer is happy and ask for a review.",
     category: "follow-up",
     state: SOP_STATES.APPROVED,
     version: 2,
@@ -124,7 +124,7 @@ export const SEED_SOPS = [
     id: "sop-aquatrace-003",
     title: "Emergency Service Escalation",
     description:
-      "When a customer reports a water emergency (burst pipe, flooding, contamination), trigger the emergency escalation path immediately.",
+      "When a customer reports a water emergency, trigger an immediate response — technician alerted within minutes, customer updated right away.",
     category: "escalation",
     state: SOP_STATES.APPROVED,
     version: 1,
@@ -174,7 +174,7 @@ export const SEED_SOPS = [
     id: "sop-aquatrace-004",
     title: "Monthly Campaign — Seasonal Inspection Reminder",
     description:
-      "Send a seasonal inspection reminder to the full customer list. Requires two-step approval and test-email confirmation before execution.",
+      "Send a targeted message to your customer list for seasonal inspections. Njord drafts it, you review and approve before anything sends.",
     category: "campaign",
     state: SOP_STATES.REVIEW,
     version: 1,
@@ -233,7 +233,7 @@ export const SEED_SOPS = [
     id: "sop-aquatrace-005",
     title: "Lead Capture — Web Form Response",
     description:
-      "Respond to web form leads within 5 minutes. Qualify the lead, log to CRM, and route to the right agent.",
+      "When someone fills out your web form, respond within 5 minutes. Qualify the lead, log it, and route to the right next step.",
     category: "intake",
     state: SOP_STATES.DRAFT,
     version: 1,
@@ -291,7 +291,7 @@ export const SEED_ONBOARDING_SESSIONS = [
     clientId: "aquatrace",
     clientName: "Aquatrace Water Services",
     blueprintId: "blueprint-aquatrace-001",
-    blueprintName: "Water Services - Standard Field Ops",
+    blueprintName: "Aquatrace Standard Operations",
     state: ONBOARDING_SESSION_STATES.ACTIVE,
     startedAt: "2026-04-10T00:00:00Z",
     completedAt: null,
@@ -317,7 +317,7 @@ export const SEED_BLUEPRINTS = [
     trade: "water-services",
     industry: "field-service",
     description:
-      "The default Aquatrace blueprint for small-to-mid water service businesses. Covers lead capture, scheduling, follow-up, and campaign execution. Use this blueprint to spin up a new client with the full Njord Norse-agent roster.",
+      "The complete Aquatrace operations setup. Covers lead intake, job follow-up, emergency escalation, and customer campaigns. Use this to get your full AI operations team running.",
     state: BLUEPRINT_STATES.ACTIVE,
     version: 1,
     linkedSOPs: [
