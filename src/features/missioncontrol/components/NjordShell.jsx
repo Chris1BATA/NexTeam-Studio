@@ -1,23 +1,24 @@
-﻿/**
- * NjordShell — tabbed nav wrapper for the full Aquatrace Mission Control suite.
- * Tabs: Chat · Session Log · SOP Library · SOP Editor · Blueprint Library · Onboarding
+/**
+ * NjordShell - tabbed nav wrapper for the full Aquatrace Mission Control suite.
+ * Tabs: Chat with Njord · Conversation History · Playbooks · Blueprints · Setup Progress
  */
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { NjordMissionControl } from "./NjordMissionControl";
 import { NjordSessionLog } from "./NjordSessionLog";
 import { SOPLibrary } from "./SOPLibrary";
 import { SOPEditor } from "./SOPEditor";
 import { BlueprintLibrary } from "./BlueprintLibrary";
 import { OnboardingChecklist } from "./OnboardingChecklist";
-import { NJORD_CONFIG, isCaseStudyMode } from "../config/njordConfig";
+import { NJORD_CONFIG } from "../config/njordConfig";
 
 const TABS = [
-  { id: "chat", label: "Chat", icon: "💬" },
-  { id: "session-log", label: "Session Log", icon: "📋" },
-  { id: "sop-library", label: "SOPs", icon: "📄" },
-  { id: "blueprint-library", label: "Blueprints", icon: "🗂" },
-  { id: "onboarding", label: "Onboarding", icon: "✅" }
+  { id: "chat", label: "Chat with Njord", icon: "💬" },
+  { id: "session-log", label: "Conversation History", icon: "📋" },
+  { id: "sop-library", label: "Playbooks", icon: "📖" },
+  { id: "blueprint-library", label: "Blueprints", icon: "🗺️" },
+  { id: "onboarding", label: "Setup Progress", icon: "✅" }
 ];
 
 const S = {
@@ -28,6 +29,23 @@ const S = {
     fontFamily: "system-ui, -apple-system, sans-serif",
     display: "flex",
     flexDirection: "column"
+  },
+  backBar: {
+    padding: "12px 24px",
+    borderBottom: "1px solid #21262D",
+    display: "flex",
+    alignItems: "center",
+    gap: 8
+  },
+  backBtn: {
+    background: "none",
+    border: "none",
+    color: "#8B949E",
+    cursor: "pointer",
+    fontSize: 14,
+    display: "flex",
+    alignItems: "center",
+    gap: 4
   },
   nav: {
     background: "#0B1120",
@@ -62,13 +80,6 @@ const S = {
     color: "#94A3B8",
     whiteSpace: "nowrap"
   },
-  caseStudyDot: {
-    width: 7,
-    height: 7,
-    borderRadius: "50%",
-    background: "#EAB308",
-    flexShrink: 0
-  },
   tab: {
     padding: "14px 16px",
     fontSize: 13,
@@ -94,6 +105,7 @@ const S = {
 };
 
 export function NjordShell() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("chat");
   const [sopEditorMode, setSopEditorMode] = useState(null); // null | "create" | { sop }
 
@@ -109,16 +121,22 @@ export function NjordShell() {
 
   const displayTabs = [
     ...TABS,
-    ...(sopEditorMode !== null ? [{ id: "sop-editor", label: "SOP Editor", icon: "✏️" }] : [])
+    ...(sopEditorMode !== null ? [{ id: "sop-editor", label: "Edit Playbook", icon: "✏️" }] : [])
   ];
 
   return (
     <div style={S.shell}>
+      {/* Back navigation */}
+      <div style={S.backBar}>
+        <button onClick={() => navigate("/mission-control/aquatrace")} style={S.backBtn}>
+          ← Back to Dashboard
+        </button>
+      </div>
+
       <nav style={S.nav}>
         <div style={S.brand}>
           <span style={S.brandBadge}>NJORD</span>
           <span style={S.brandName}>{NJORD_CONFIG.brandName} Mission Control</span>
-          {isCaseStudyMode() && <span style={S.caseStudyDot} title="Case-study mode" />}
         </div>
 
         {displayTabs.map((tab) => (

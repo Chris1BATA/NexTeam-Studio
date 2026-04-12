@@ -1,11 +1,8 @@
-﻿/**
- * NjordMissionControl — Mission Control UI Shell
+/**
+ * NjordMissionControl - Mission Control UI Shell
  *
- * The primary interface for the Aquatrace case-study agent session.
- * Renders the Njord chat interface, response panel, and campaign controls.
- *
- * Case-study gating: a banner is always shown in case-study mode
- * indicating that full sends are sandboxed.
+ * The primary chat interface for Aquatrace.
+ * Renders the Njord chat interface and response panel.
  */
 
 import { useCallback, useRef, useState } from "react";
@@ -59,16 +56,6 @@ const styles = {
     margin: "2px 0 0 0",
     fontSize: 12,
     color: "#64748B",
-  },
-  caseStudyBanner: {
-    background: "#1C1000",
-    borderBottom: "1px solid #854D0E",
-    padding: "8px 24px",
-    fontSize: 12,
-    color: "#FCD34D",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
   },
   body: {
     flex: 1,
@@ -218,7 +205,7 @@ export function NjordMissionControl() {
   );
 
   const handleVoiceStub = useCallback(() => {
-    // Voice hook stub — wire microphone input here
+    // Voice hook stub - wire microphone input here
     alert("Voice input stub. Wire a microphone/ASR integration here (e.g. browser SpeechRecognition or Deepgram).");
   }, []);
 
@@ -229,9 +216,9 @@ export function NjordMissionControl() {
         <div style={styles.headerLeft}>
           <span style={styles.agentBadge}>NJORD</span>
           <div>
-            <p style={styles.title}>Aquatrace Mission Control</p>
+            <p style={styles.title}>Aquatrace Operations</p>
             <p style={styles.subtitle}>
-              {NJORD_CONFIG.brandName} · NexTeam-Studio Case Study #1
+              {NJORD_CONFIG.brandName} · Powered by Njord
             </p>
           </div>
         </div>
@@ -239,18 +226,6 @@ export function NjordMissionControl() {
           Session: {SESSION_ID.slice(-8)}
         </div>
       </div>
-
-      {/* Case-study warning banner */}
-      {isCaseStudyMode() && (
-        <div style={styles.caseStudyBanner}>
-          <span>⚠️</span>
-          <span>
-            <strong>Case-study mode active.</strong> All campaign sends are sandbox/log-only.
-            No real emails will be delivered to any recipient list.
-            Test email must be confirmed before any campaign can be approved.
-          </span>
-        </div>
-      )}
 
       {/* Body */}
       <div style={styles.body}>
@@ -289,7 +264,7 @@ export function NjordMissionControl() {
               );
             })}
             {thinking && (
-              <div style={styles.thinking}>Njord is thinking…</div>
+              <div style={styles.thinking}>Njord is thinking.</div>
             )}
           </div>
 
@@ -300,7 +275,7 @@ export function NjordMissionControl() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Message Njord…"
+              placeholder="Message Njord."
               rows={2}
             />
             <button
@@ -309,7 +284,7 @@ export function NjordMissionControl() {
               onClick={handleVoiceStub}
               title="Voice input (stub)"
             >
-              🎙
+              🎙️
             </button>
             <button
               style={{
