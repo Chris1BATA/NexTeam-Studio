@@ -178,7 +178,7 @@ function SOPCard({ sop, onSelect, onTransition, onDuplicate }) {
         <span style={{ ...S.stateChip, background: ss.background, color: ss.color }}>{sop.state}</span>
       </div>
       <div style={S.cardMeta}>
-        {sop.category} · v{sop.version} {sop._seeded ? "· seed" : ""}
+        {sop.category} · v{sop.version}
       </div>
       <div style={S.cardDesc}>{sop.description?.slice(0, 120) || "(No description)"}{(sop.description?.length || 0) > 120 ? "…" : ""}</div>
       {sop.tags?.length > 0 && (
@@ -226,7 +226,7 @@ function SOPDetail({ sop, onClose, onTransition }) {
         <h2 style={{ ...S.title, marginBottom: 6 }}>{sop.title}</h2>
         <div style={{ fontSize: 12, color: "#64748B", marginBottom: 16 }}>
           {sop.category} · State: {sop.state} · Version {sop.version}
-          {sop._seeded ? " · seed data" : ""}
+         
         </div>
         <p style={{ fontSize: 14, color: "#94A3B8", lineHeight: 1.6, marginBottom: 16 }}>{sop.description}</p>
 

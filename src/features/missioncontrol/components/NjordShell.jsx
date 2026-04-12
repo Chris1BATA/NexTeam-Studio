@@ -132,6 +132,7 @@ export function NjordShell() {
           ← Back to Dashboard
         </button>
       </div>
+      <div style={{ color: "#8B949E", fontSize: 12, padding: "4px 24px 8px" }}>Home &gt; Workspace</div>
 
       <nav style={S.nav}>
         <div style={S.brand}>

@@ -1,0 +1,1 @@
+﻿const fs = require('fs'); let sop = fs.readFileSync('C:/Users/Peyto/NexTeam-Studio/src/features/missioncontrol/components/SOPLibrary.jsx', 'utf8'); console.log('seeded count:', (sop.match(/_seeded/g)||[]).length);
