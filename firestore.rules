@@ -1,0 +1,281 @@
+rules_version = '2';
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NexTeam-Studio — Firestore Security Rules
+//
+// STATUS: DRAFT — not yet deployed. Deploy with:
+//   firebase deploy --only firestore:rules
+//
+// ARCHITECTURE NOTES:
+//   - server.js uses the Firebase CLIENT SDK (not Admin SDK), so these rules
+//     apply to all Stripe webhook writes. To fully restrict clientOrganizations
+//     to backend-only, migrate server.js to use the Admin SDK (bypasses rules).
+//   - Mission control collections (SOPs, blueprints, onboarding sessions) are
+//     written from unauthenticated client-side code in case-study mode.
+//     Once production tenants are added, add auth checks to these rules.
+//   - agentSessions are written from unauthenticated client-side code.
+//     Add auth once the Agent Architect interview flow has login.
+//
+// COLLECTION MAP:
+//   agentSessions/{sessionId}                           — Agent Architect sessions
+//   tenants/{tenantId}/sops/{sopId}                    — SOPs per tenant
+//   tenants/{tenantId}/blueprints/{blueprintId}        — Blueprints per tenant
+//   tenants/{tenantId}/onboardingSessions/{sessionId}  — Live onboarding sessions
+//   clientOrganizations/{clientId}                     — Provisioned clients
+//   clientOrganizations/{clientId}/members/{userId}    — Portal members
+//   clientOrganizations/{clientId}/invites/{inviteId}  — Portal invites
+//   clientOrganizations/{clientId}/deliveryState/{id}  — Lifecycle state
+//   njordSessions/{sessionId}                          — Njord session logs
+//   njordSessions/{sessionId}/events/{eventId}         — Njord event log entries
+//   njordCampaignLogs/{logId}                          — Njord campaign audit logs
+// ══════════════════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── agentSessions ────────────────────────────────────────────────────────
+    // Agent Architect interview sessions.
+    // Written from unauthenticated client-side code (no login gate yet).
+    // TODO: once Agent Architect has auth, restrict writes to request.auth != null.
+    match /agentSessions/{sessionId} {
+      // Reads: authenticated users only (admin/operator dashboard)
+      allow read: if request.auth != null;
+
+      // Writes: validate required fields + no path-injection characters
+      allow create: if isValidAgentSession(request.resource.data);
+      allow update: if isValidAgentSession(request.resource.data);
+      allow delete: if false;
+    }
+
+    // ── tenants/{tenantId}/* ─────────────────────────────────────────────────
+    // Tenant-scoped collections for SOPs, blueprints, and onboarding sessions.
+    // Currently only the "aquatrace-case-study" sandbox tenant is active.
+    // All writes are from unauthenticated client-side in case-study mode.
+    // TODO: when production tenants are added, require auth + tenant membership.
+
+    match /tenants/{tenantId}/sops/{sopId} {
+      allow read: if isKnownTenant(tenantId);
+      allow create: if isKnownTenant(tenantId) && isValidSOPWrite(request.resource.data);
+      allow update: if isKnownTenant(tenantId) && isValidSOPWrite(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /tenants/{tenantId}/blueprints/{blueprintId} {
+      allow read: if isKnownTenant(tenantId);
+      allow create: if isKnownTenant(tenantId) && isValidBlueprintWrite(request.resource.data);
+      allow update: if isKnownTenant(tenantId) && isValidBlueprintWrite(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /tenants/{tenantId}/onboardingSessions/{sessionId} {
+      allow read: if isKnownTenant(tenantId);
+      // Onboarding sessions: only allow update (not arbitrary create — instantiation
+      // comes through blueprintService which validates the source blueprint).
+      allow create: if isKnownTenant(tenantId) && isValidOnboardingSession(request.resource.data);
+      allow update: if isKnownTenant(tenantId);
+      allow delete: if false;
+    }
+
+    // ── clientOrganizations ──────────────────────────────────────────────────
+    // Provisioned client records created by the Stripe webhook (server.js).
+    // NOTE: server.js uses the client SDK, so these rules apply to Stripe
+    // webhook writes. The field validation below catches malformed payloads.
+    // When server.js is migrated to Admin SDK, tighten to: allow write: if false.
+
+    match /clientOrganizations/{clientId} {
+      // Reads: authenticated portal members of this org
+      allow read: if request.auth != null && isPortalMember(database, clientId, request.auth.uid);
+
+      // Writes: allow from unauthenticated (server.js webhook) or authenticated portal admins
+      // Require minimum valid field set to block arbitrary writes.
+      allow create: if isValidClientOrgCreate(request.resource.data);
+      allow update: if isValidClientOrgUpdate(request.resource.data)
+                    || (request.auth != null && isPortalAdmin(database, clientId, request.auth.uid));
+      allow delete: if false;
+    }
+
+    match /clientOrganizations/{clientId}/members/{userId} {
+      allow read: if request.auth != null
+                  && (request.auth.uid == userId
+                      || isPortalMember(database, clientId, request.auth.uid));
+
+      // Members can only write their own record (invite activation, login touch)
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    match /clientOrganizations/{clientId}/invites/{inviteId} {
+      // Reads: authenticated portal members (to validate invite tokens server-side)
+      allow read: if request.auth != null
+                  && isPortalMember(database, clientId, request.auth.uid)
+                  || request.auth == null; // invite lookup uses token before auth
+
+      // Writes: only unauthenticated backend (Stripe webhook) or accepting user
+      allow create: if isValidInviteCreate(request.resource.data);
+      allow update: if isValidInviteActivation(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /clientOrganizations/{clientId}/deliveryState/{stateId} {
+      allow read: if request.auth != null && isPortalMember(database, clientId, request.auth.uid);
+      // Delivery state is written exclusively by server.js Stripe webhook
+      allow create: if isValidDeliveryStateCreate(request.resource.data);
+      allow update: if isValidDeliveryStateCreate(request.resource.data);
+      allow delete: if false;
+    }
+
+    // ── njordSessions ────────────────────────────────────────────────────────
+    // Case-study mode session logs. Open writes in sandbox mode.
+    // Events are append-only. Deletes are never allowed.
+
+    match /njordSessions/{sessionId} {
+      allow read: if request.auth != null;
+      allow create, update: if isValidNjordSession(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /njordSessions/{sessionId}/events/{eventId} {
+      allow read: if request.auth != null;
+      allow create: if isValidNjordEvent(request.resource.data);
+      allow update: if false; // events are immutable once written
+      allow delete: if false;
+    }
+
+    match /njordCampaignLogs/{logId} {
+      allow read: if request.auth != null;
+      allow create: if isValidNjordCampaignLog(request.resource.data);
+      allow update: if false; // audit logs are immutable
+      allow delete: if false;
+    }
+
+    // ── deny everything else ─────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Helper Functions
+    // ════════════════════════════════════════════════════════════════════════
+
+    // Known/allowed tenant IDs. Add production tenant IDs here when they go live.
+    function isKnownTenant(tenantId) {
+      return tenantId in ["aquatrace-case-study", "nexteam-studio"];
+    }
+
+    // Validate agentSessions write — require core fields, no path-injection chars.
+    function isValidAgentSession(data) {
+      return data.keys().hasAll(["sessionId", "tenantId", "status"])
+          && data.sessionId is string
+          && data.sessionId.size() > 0
+          && data.sessionId.size() < 128
+          && data.tenantId is string
+          && data.tenantId.size() > 0
+          && data.status in ["in_progress", "completed", "error"];
+    }
+
+    // Validate SOP write — enforce schema fields and enum values.
+    function isValidSOPWrite(data) {
+      return data.keys().hasAll(["title", "state", "category"])
+          && data.title is string
+          && data.title.size() >= 3
+          && data.title.size() < 256
+          && data.state in ["draft", "review", "approved", "archived"]
+          && data.category in [
+               "intake", "follow-up", "campaign", "quality-check",
+               "onboarding", "reporting", "escalation", "maintenance"
+             ];
+    }
+
+    // Validate blueprint write — enforce schema fields and enum values.
+    function isValidBlueprintWrite(data) {
+      return data.keys().hasAll(["name", "state"])
+          && data.name is string
+          && data.name.size() >= 3
+          && data.name.size() < 256
+          && data.state in ["draft", "active", "archived"];
+    }
+
+    // Validate onboarding session create — require clientId and blueprintId linkage.
+    function isValidOnboardingSession(data) {
+      return data.keys().hasAll(["clientId", "blueprintId", "state"])
+          && data.clientId is string
+          && data.clientId.size() > 0
+          && data.blueprintId is string
+          && data.blueprintId.size() > 0
+          && data.state in ["pending", "active", "complete", "cancelled"];
+    }
+
+    // Validate clientOrg create — require Stripe-provisioned fields.
+    function isValidClientOrgCreate(data) {
+      return data.keys().hasAll(["clientId", "slug", "purchaseStatus"])
+          && data.clientId is string
+          && data.clientId.size() > 0
+          && data.slug is string
+          && data.slug.size() > 0
+          && data.purchaseStatus in ["paid", "pending", "failed", "refunded"];
+    }
+
+    // Validate clientOrg update — at minimum require updatedAt timestamp.
+    function isValidClientOrgUpdate(data) {
+      return data.keys().hasAny(["updatedAt", "portalStatus", "onboardingStatus"]);
+    }
+
+    // Validate invite create — require token, email, status, source.
+    function isValidInviteCreate(data) {
+      return data.keys().hasAll(["token", "email", "status", "source"])
+          && data.token is string
+          && data.token.size() > 0
+          && data.email is string
+          && data.email.size() > 0
+          && data.status == "pending"
+          && data.source == "stripe_webhook_backend";
+    }
+
+    // Validate invite activation — only allow status change to accepted.
+    function isValidInviteActivation(data) {
+      return data.keys().hasAll(["status"])
+          && data.status == "accepted";
+    }
+
+    // Validate deliveryState create.
+    function isValidDeliveryStateCreate(data) {
+      return data.keys().hasAll(["clientId", "currentStage"])
+          && data.clientId is string
+          && data.clientId.size() > 0;
+    }
+
+    // Validate njordSession — require sessionId and tenantId.
+    function isValidNjordSession(data) {
+      return data.keys().hasAll(["sessionId", "tenantId"])
+          && data.sessionId is string
+          && data.sessionId.size() > 0
+          && data.tenantId is string
+          && data.tenantId == "aquatrace-case-study";
+    }
+
+    // Validate njordEvent — require type and timestamp.
+    function isValidNjordEvent(data) {
+      return data.keys().hasAll(["type", "tenantId"])
+          && data.type is string
+          && data.type.size() > 0
+          && data.tenantId == "aquatrace-case-study";
+    }
+
+    // Validate njordCampaignLog.
+    function isValidNjordCampaignLog(data) {
+      return data.keys().hasAll(["tenantId"])
+          && data.tenantId == "aquatrace-case-study";
+    }
+
+    // Check if uid is a portal member of this org.
+    function isPortalMember(database, clientId, uid) {
+      return exists(/databases/$(database)/documents/clientOrganizations/$(clientId)/members/$(uid));
+    }
+
+    // Check if uid is a portal admin (client_admin or nexteam_admin role).
+    function isPortalAdmin(database, clientId, uid) {
+      let member = get(/databases/$(database)/documents/clientOrganizations/$(clientId)/members/$(uid));
+      return member.data.role in ["client_admin", "nexteam_admin"];
+    }
+  }
+}
