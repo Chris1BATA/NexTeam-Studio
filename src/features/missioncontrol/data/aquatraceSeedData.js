@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Aquatrace case-study seed data.
  * Used as fallback when Firestore is unavailable or collection is empty.
  * Schema-compliant with sopSchema, blueprintSchema, onboardingSchema.
@@ -284,6 +284,31 @@ export const SEED_SOPS = [
 // SEED BLUEPRINT
 // ──────────────────────────────────────────────────
 
+export const SEED_ONBOARDING_SESSIONS = [
+  {
+    id: "onboard-aquatrace-001",
+    clientId: "aquatrace",
+    clientName: "Aquatrace Water Services",
+    blueprintId: "blueprint-aquatrace-001",
+    blueprintName: "Water Services - Standard Field Ops",
+    state: ONBOARDING_SESSION_STATES.ACTIVE,
+    startedAt: "2026-04-10T00:00:00Z",
+    completedAt: null,
+    assignedTo: "operator",
+    notes: "Case-study onboarding session for Aquatrace reference client.",
+    createdAt: "2026-04-10T00:00:00Z",
+    updatedAt: "2026-04-10T00:00:00Z",
+    tasks: [
+      { taskId: "task-onboard-01", title: "Configure business profile", state: ONBOARDING_TASK_STATES.COMPLETE, completedAt: "2026-04-10T01:00:00Z", completedBy: "operator" },
+      { taskId: "task-onboard-02", title: "Set up intake channels", state: ONBOARDING_TASK_STATES.IN_PROGRESS },
+      { taskId: "task-onboard-03", title: "Configure test email address", state: ONBOARDING_TASK_STATES.NOT_STARTED },
+      { taskId: "task-onboard-04", title: "Activate post-service follow-up SOP", state: ONBOARDING_TASK_STATES.NOT_STARTED },
+      { taskId: "task-onboard-05", title: "Review emergency escalation SOP", state: ONBOARDING_TASK_STATES.NOT_STARTED },
+      { taskId: "task-onboard-06", title: "Run first Njord chat session", state: ONBOARDING_TASK_STATES.NOT_STARTED },
+      { taskId: "task-onboard-07", title: "Approve go-live", state: ONBOARDING_TASK_STATES.NOT_STARTED }
+    ]
+  }
+];
 export const SEED_BLUEPRINTS = [
   {
     id: "blueprint-aquatrace-001",
