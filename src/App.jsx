@@ -32,6 +32,11 @@ const MissionControlGate = lazy(() =>
     default: module.MissionControlGate
   }))
 );
+const AquatraceDashboard = lazy(() =>
+  import("./features/missioncontrol/components/aquatracedashboard").then((module) => ({
+    default: module.AquatraceDashboard
+  }))
+);
 const MissionControlHome = lazy(() =>
   import("./features/missioncontrol/components/missioncontrolhome").then((module) => ({
     default: module.MissionControlHome
@@ -80,6 +85,16 @@ export function App() {
           element={
             <AdminGate>
               <MissionControlHome />
+            </AdminGate>
+          }
+        />
+
+        {/* Aquatrace Mission Control dashboard — /mission-control/aquatrace */}
+        <Route
+          path="/mission-control/aquatrace"
+          element={
+            <AdminGate>
+              <AquatraceDashboard />
             </AdminGate>
           }
         />
