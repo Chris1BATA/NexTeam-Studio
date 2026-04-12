@@ -6,6 +6,7 @@
 
 import { SOP_STATES } from "../schemas/sopSchema";
 import { BLUEPRINT_STATES } from "../schemas/blueprintSchema";
+import { ONBOARDING_TASK_STATES, ONBOARDING_SESSION_STATES } from "../schemas/onboardingSchema";
 
 // ──────────────────────────────────────────────────
 // SEED SOPs
