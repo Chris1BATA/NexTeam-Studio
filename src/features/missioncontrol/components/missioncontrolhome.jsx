@@ -175,7 +175,7 @@ export function MissionControlHome() {
                   Updated: {formatUpdatedAt(client.updatedAt)}
                 </p>
                 <Link to={client.route} style={styles.routeBtn}>
-                  Open Mission Control
+                  {client.caseStudyMode ? "Open Njord Workspace →" : "Open Mission Control"}
                 </Link>
               </div>
             ))}

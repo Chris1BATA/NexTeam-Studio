@@ -46,7 +46,7 @@ export async function fetchMissionControlClients(maxResults = 50) {
       hostAgent: NJORD_CONFIG.agentName,
       caseStudyMode: true,
       updatedAt: null,
-      route: `/mission-control/${NJORD_CONFIG.tenantId}`
+      route: "/mission-control/aquatrace/workspace"
     });
   }
 

@@ -22,9 +22,19 @@ const NjordMissionControl = lazy(() =>
     default: module.NjordMissionControl
   }))
 );
+const NjordShell = lazy(() =>
+  import("./features/missioncontrol/components/njordshell").then((module) => ({
+    default: module.NjordShell
+  }))
+);
 const MissionControlGate = lazy(() =>
   import("./features/missioncontrol/components/missioncontrolgate").then((module) => ({
     default: module.MissionControlGate
+  }))
+);
+const MissionControlHome = lazy(() =>
+  import("./features/missioncontrol/components/missioncontrolhome").then((module) => ({
+    default: module.MissionControlHome
   }))
 );
 
@@ -53,6 +63,8 @@ export function App() {
         <Route path="/" element={<Navigate to="/agent-architect" replace />} />
         <Route path="/agent-architect" element={<AgentArchitectShell />} />
         <Route path="/success" element={<SuccessScreen />} />
+
+        {/* Operator: Lead sessions view — password-gated */}
         <Route
           path="/admin/sessions"
           element={
@@ -61,7 +73,36 @@ export function App() {
             </AdminGate>
           }
         />
-        {/* Aquatrace case-study Mission Control — gated by AdminGate + MissionControlGate */}
+
+        {/* Mission Control client registry home */}
+        <Route
+          path="/mission-control/clients"
+          element={
+            <AdminGate>
+              <MissionControlHome />
+            </AdminGate>
+          }
+        />
+
+        {/* Aquatrace workspace — canonical URL; Njord is tab #1 (Chat) */}
+        <Route
+          path="/mission-control/aquatrace/workspace"
+          element={
+            <AdminGate>
+              <MissionControlGate>
+                <NjordShell />
+              </MissionControlGate>
+            </AdminGate>
+          }
+        />
+
+        {/* Old case-study URL — redirect to canonical workspace */}
+        <Route
+          path="/mission-control/aquatrace-case-study"
+          element={<Navigate to="/mission-control/aquatrace/workspace" replace />}
+        />
+
+        {/* Legacy direct chat route — backwards compat */}
         <Route
           path="/mission-control"
           element={
