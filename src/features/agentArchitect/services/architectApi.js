@@ -263,3 +263,4 @@ export async function extractPatch(fullTranscript, draftPatch = {}) {
     return null;
   }
 }
+
