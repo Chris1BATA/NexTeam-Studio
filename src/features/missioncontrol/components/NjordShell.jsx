@@ -1,6 +1,5 @@
 /**
- * NjordShell - tabbed nav wrapper for the full Aquatrace Mission Control suite.
- * Tabs: Chat with Njord · Conversation History · Playbooks · Blueprints · Setup Progress
+ * NjordShell - tabbed nav wrapper for the Aquatrace workspace.
  */
 
 import { useState } from "react";
@@ -11,14 +10,16 @@ import { SOPLibrary } from "./SOPLibrary";
 import { SOPEditor } from "./SOPEditor";
 import { BlueprintLibrary } from "./BlueprintLibrary";
 import { OnboardingChecklist } from "./OnboardingChecklist";
+import { WebsiteRequestPanel } from "./WebsiteRequestPanel";
 import { NJORD_CONFIG } from "../config/njordConfig";
 
 const TABS = [
-  { id: "chat", label: "Chat with Njord", icon: "💬" },
-  { id: "session-log", label: "Conversation History", icon: "📋" },
-  { id: "sop-library", label: "Playbooks", icon: "📖" },
-  { id: "blueprint-library", label: "Blueprints", icon: "🗺️" },
-  { id: "onboarding", label: "Setup Progress", icon: "✅" }
+  { id: "chat", label: "Chat with Njord", icon: "??" },
+  { id: "website", label: "Website Requests", icon: "??" },
+  { id: "session-log", label: "Conversation History", icon: "??" },
+  { id: "sop-library", label: "Playbooks", icon: "??" },
+  { id: "blueprint-library", label: "Blueprints", icon: "??" },
+  { id: "onboarding", label: "Setup Progress", icon: "?" },
 ];
 
 const S = {
@@ -28,14 +29,14 @@ const S = {
     color: "#E2E8F0",
     fontFamily: "system-ui, -apple-system, sans-serif",
     display: "flex",
-    flexDirection: "column"
+    flexDirection: "column",
   },
   backBar: {
     padding: "12px 24px",
     borderBottom: "1px solid #21262D",
     display: "flex",
     alignItems: "center",
-    gap: 8
+    gap: 8,
   },
   backBtn: {
     background: "none",
@@ -45,7 +46,7 @@ const S = {
     fontSize: 14,
     display: "flex",
     alignItems: "center",
-    gap: 4
+    gap: 4,
   },
   nav: {
     background: "#0B1120",
@@ -55,7 +56,7 @@ const S = {
     gap: 0,
     padding: "0 16px",
     flexWrap: "nowrap",
-    overflowX: "auto"
+    overflowX: "auto",
   },
   brand: {
     display: "flex",
@@ -63,7 +64,7 @@ const S = {
     gap: 10,
     padding: "12px 16px 12px 0",
     marginRight: 16,
-    borderRight: "1px solid #1E293B"
+    borderRight: "1px solid #1E293B",
   },
   brandBadge: {
     background: "linear-gradient(135deg,#0EA5E9,#0284C7)",
@@ -72,13 +73,13 @@ const S = {
     fontSize: 12,
     padding: "3px 8px",
     borderRadius: 5,
-    letterSpacing: 1
+    letterSpacing: 1,
   },
   brandName: {
     fontSize: 13,
     fontWeight: 600,
     color: "#94A3B8",
-    whiteSpace: "nowrap"
+    whiteSpace: "nowrap",
   },
   tab: {
     padding: "14px 16px",
@@ -93,21 +94,21 @@ const S = {
     display: "flex",
     alignItems: "center",
     gap: 6,
-    transition: "color 0.15s"
+    transition: "color 0.15s",
   },
   tabActive: {
     color: "#7DD3FC",
-    borderBottomColor: "#0EA5E9"
+    borderBottomColor: "#0EA5E9",
   },
   content: {
-    flex: 1
-  }
+    flex: 1,
+  },
 };
 
 export function NjordShell() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("chat");
-  const [sopEditorMode, setSopEditorMode] = useState(null); // null | "create" | { sop }
+  const [sopEditorMode, setSopEditorMode] = useState(null);
 
   function handleCreateNew() {
     setActiveTab("sop-editor");
@@ -121,15 +122,14 @@ export function NjordShell() {
 
   const displayTabs = [
     ...TABS,
-    ...(sopEditorMode !== null ? [{ id: "sop-editor", label: "Edit Playbook", icon: "✏️" }] : [])
+    ...(sopEditorMode !== null ? [{ id: "sop-editor", label: "Edit Playbook", icon: "??" }] : []),
   ];
 
   return (
     <div style={S.shell}>
-      {/* Back navigation */}
       <div style={S.backBar}>
         <button onClick={() => navigate("/mission-control/aquatrace")} style={S.backBtn}>
-          ← Back to Dashboard
+          ? Back to Dashboard
         </button>
       </div>
       <div style={{ color: "#8B949E", fontSize: 12, padding: "4px 24px 8px" }}>Home &gt; Workspace</div>
@@ -137,7 +137,7 @@ export function NjordShell() {
       <nav style={S.nav}>
         <div style={S.brand}>
           <span style={S.brandBadge}>NJORD</span>
-          <span style={S.brandName}>{NJORD_CONFIG.brandName} Mission Control</span>
+          <span style={S.brandName}>{NJORD_CONFIG.brandName} Workspace</span>
         </div>
 
         {displayTabs.map((tab) => (
@@ -146,7 +146,7 @@ export function NjordShell() {
             type="button"
             style={{
               ...S.tab,
-              ...(activeTab === tab.id ? S.tabActive : {})
+              ...(activeTab === tab.id ? S.tabActive : {}),
             }}
             onClick={() => {
               setActiveTab(tab.id);
@@ -161,13 +161,22 @@ export function NjordShell() {
 
       <div style={S.content}>
         {activeTab === "chat" && <NjordMissionControl />}
+        {activeTab === "website" && (
+          <WebsiteRequestPanel
+            initialType="brokk"
+            onBack={() => setActiveTab("chat")}
+          />
+        )}
         {activeTab === "session-log" && <NjordSessionLog />}
         {activeTab === "sop-library" && <SOPLibrary onCreateNew={handleCreateNew} />}
         {activeTab === "sop-editor" && (
           <SOPEditor
             existingSOP={sopEditorMode !== "create" ? sopEditorMode : null}
             onSaved={handleSopSaved}
-            onCancel={() => { setActiveTab("sop-library"); setSopEditorMode(null); }}
+            onCancel={() => {
+              setActiveTab("sop-library");
+              setSopEditorMode(null);
+            }}
           />
         )}
         {activeTab === "blueprint-library" && <BlueprintLibrary />}
