@@ -1,44 +1,50 @@
 # NexTeam Studio
 
-**Live:** https://nexteam-studio-production.up.railway.app
+**Live:** https://nexteam-studio-production.up.railway.app  
 **Admin:** https://nexteam-studio-production.up.railway.app/admin/sessions
 
-NexTeam Studio is a conversational AI intake platform for field service businesses. A business owner visits the app, has a guided conversation with **Nexi** (an AI consultant persona powered by Claude), and walks away with a structured agent spec — and ideally a booked setup call.
+NexTeam Studio is a conversational AI intake and operations platform for field service businesses. A business owner can talk with **Nexi** to define what they need, review a structured plan, and move toward setup with a clear handoff.
 
 ---
 
-## What It Actually Does Today (March 2026)
+## What It Does Today
 
-1. Visitor lands on a dark splash screen and clicks **Start Conversation**
-2. Nexi (Rive-animated avatar + ElevenLabs voice) greets them and opens a streaming interview
-3. Interview collects: business name, trade, crew size, job volume, service area, pain points, existing tools, agent recommendation, priority agent, and agent name
-4. After each turn: a second Claude call silently extracts a structured JSON spec patch and writes it to Firestore
-5. When the interview is complete: spec review card shown → CTA to Stripe payment link
-6. After payment: success screen with next steps and book-a-call button (Calendly)
+### Public-facing product
+1. A visitor lands on the main experience and starts a conversation.
+2. Nexi greets them with avatar + voice support and runs a guided intake.
+3. The conversation collects the business details needed to shape an agent setup plan.
+4. A structured spec is extracted and saved as the conversation progresses.
+5. The user reaches a review step with a clear next action.
+
+### Aquatrace workspace
+1. `/mission-control/aquatrace` opens the client-facing Aquatrace dashboard.
+2. `/mission-control/aquatrace/workspace` opens the Njord workspace.
+3. The workspace gives quick access to:
+   - Chat with Njord
+   - Conversation History
+   - Playbooks
+   - Agent Setup Templates
+   - Setup Progress
+4. The Aquatrace workspace is now written in plain business language and designed to feel client-ready instead of internal.
 
 ---
 
-## Flow Map
+## Current Product Surfaces
 
-```
-Splash Screen
-    ↓  [Start Conversation]
-AgentArchitectShell (XState machine)
-    ↓  BOOT → Claude streams Nexi greeting (voice + avatar)
-Conversation Loop
-    ↓  User types or speaks (mic button) → SUBMIT_TURN
-    ↓  Claude streams reply (interviewer persona)
-    ↓  STREAM_COMPLETE → Claude extracts JSON patch from transcript
-    ↓  applyAgentPatch() → written to Firestore: agentSessions/{sessionId}
-    ↓  Back to awaiting_user
-    ↓  ...repeats until user confirms summary...
-    ↓  COMPLETE → completeAgent() → status: "completed" in Firestore
-Spec Review Panel
-    ↓  Shows agent spec + "Continue to Setup — $197" button
-    ↓  Redirects to Stripe payment link
-Success Screen (/success)
-    ↓  "You're in." + next steps + Book a Call button
-```
+### Main app
+- Nexi conversation flow
+- structured spec extraction
+- Firestore-backed session persistence
+- spec review and success flow
+- admin session review screen
+
+### Aquatrace operations workspace
+- client-facing dashboard
+- Njord operations workspace
+- playbook library and editor
+- agent setup template library
+- onboarding / setup progress checklist
+- conversation history view
 
 ---
 
@@ -48,120 +54,102 @@ Success Screen (/success)
 |---|---|
 | Frontend | React 19, Vite, React Router v7 |
 | State machine | XState v5 |
-| Avatar | Rive animation (avatar.riv) |
-| AI | Anthropic Claude (`claude-sonnet-4-20250514`) via Express proxy |
-| Voice | ElevenLabs TTS (streaming, amplitude-reactive) |
+| Avatar | Rive animation |
+| AI | Anthropic Claude via Express proxy |
+| Voice | ElevenLabs TTS |
 | Database | Firebase Firestore |
-| Server | Express (Node) — API proxy, serves built app |
-| Hosting | Railway (nixpacks build, auto-deploy on push to main) |
+| Server | Express |
+| Hosting | Railway |
 
 ---
 
-## What Is Live and Working
+## What Is Working
 
-- ✅ Splash screen, boot sequence, avatar animation
-- ✅ Full conversational interview flow with Claude (streaming, compact context)
-- ✅ XState machine managing all UI states
-- ✅ Rive avatar reacting to conversation state (idle / listening / speaking glow)
-- ✅ ElevenLabs TTS: voice + amplitude-reactive visual, barge-in support
-- ✅ Extractor: second Claude call parses transcript into structured JSON spec
-- ✅ Firestore session persistence: patch written after each turn, marked complete on finish
-- ✅ Spec Review Panel: shows extracted agent spec with payment CTA
-- ✅ Success Screen: next steps + conditional booking button
-- ✅ Express proxy: API keys server-side only
-- ✅ Railway deployment: live and auto-deploying
-- ✅ Admin session view: `/admin/sessions` — lists all Firestore sessions with spec summary
-- ✅ Multi-tenant foundation: `tenantId` in all Firestore writes, tenant config module, per-client subagent config structure
+- Guided Nexi intake flow
+- Structured spec extraction and persistence
+- Firestore-backed session saving
+- Admin session review page
+- Aquatrace client dashboard and workspace routing
+- Plain-language playbooks, templates, onboarding, and conversation history
+- Persistent dashboard entry points into the Aquatrace workspace
+- Production build passes locally
 
 ---
 
-## What Still Needs Completing Before Full Launch
+## Current Known Blockers
 
-- ⚠️ **Railway env vars** — Firebase, ElevenLabs, Stripe, and booking link vars must be verified as set in Railway dashboard (see WAIT-002 in blockers.md)
-- ⚠️ **Production persistence spot-check** — confirm Firestore writes are actually landing in production (see PERSISTENCE_VERIFICATION.md)
-- ⚠️ **Admin auth** — `/admin/sessions` is unprotected. Anyone who knows the URL can see session data. Needs a password or token gate before sharing externally.
-- ⚠️ **Stripe live mode** — test vs. live mode for the payment link needs to be verified before taking real money
-
----
-
-## What Is Planned But Not Yet Real
-
-- 🔲 **Actual agent deployment** — the flow produces a spec, but no AI agent is provisioned for the customer post-purchase. Post-interview handoff is manual (book a call).
-- 🔲 **User authentication** — sessions are anonymous. No login, account, or returning-customer recognition.
-- 🔲 **Email confirmations** — no email is sent on completion or payment. Success screen references a contact email (hello@nexteam.studio) but no email integration exists.
-- 🔲 **Multi-tenant routing** — foundation is in (tenantId in schema, tenantConfig.js, subagentRoster.js), but runtime tenant selection by URL/subdomain is not implemented.
+- Railway `ANTHROPIC_API_KEY` is exhausted and must be restored to recover live AI responses.
+- Test-email checkpoint still requires:
+  - `RESEND_API_KEY`
+  - `VITE_NJORD_TEST_EMAIL`
+  - `RESEND_FROM_EMAIL`
+- Custom Aquatrace branding / avatar assets have not been provided yet.
 
 ---
 
-## Setup
+## What Is Intentionally Not Done Yet
 
-### Prerequisites
+- Real outbound campaign sending without approval
+- Fully automated post-purchase agent deployment
+- Public multi-tenant runtime routing by URL/subdomain
+- Final branded asset pass for Aquatrace
 
-- Node.js >= 22
-- Railway account (or any Node-compatible host)
-- Anthropic API key
-- ElevenLabs API key (voice optional — app works without it, silently)
-- Firebase project with Firestore enabled
+---
 
-### Environment Variables
+## Environment Variables
 
-Copy `.env.example` to `.env` and fill in all values.
+Copy `.env.example` to `.env` and fill in the required values.
 
-```env
-# Server-side only (never exposed to browser)
-ANTHROPIC_API_KEY=
-ELEVENLABS_API_KEY=
+Core variables include:
+- `ANTHROPIC_API_KEY`
+- `ELEVENLABS_API_KEY`
+- `VITE_FIREBASE_*`
+- `VITE_APP_URL`
+- `VITE_BOOKING_LINK`
+- `VITE_STRIPE_PAYMENT_LINK`
+- `VITE_TENANT_ID`
 
-# Firebase (injected at build time via Vite — standard for Firebase web apps)
-VITE_FIREBASE_API_KEY=
-VITE_FIREBASE_AUTH_DOMAIN=
-VITE_FIREBASE_PROJECT_ID=
-VITE_FIREBASE_STORAGE_BUCKET=
-VITE_FIREBASE_MESSAGING_SENDER_ID=
-VITE_FIREBASE_APP_ID=
+Aquatrace email checkpoint variables:
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- `VITE_NJORD_TEST_EMAIL`
 
-# App URLs and payment
-VITE_APP_URL=                 # Your deployed app URL
-VITE_BOOKING_LINK=            # Calendly or booking URL
-VITE_STRIPE_PAYMENT_LINK=     # Stripe payment link (set mode: payment, $197)
+---
 
-# Optional: multi-tenant (defaults to 'nexteam-studio' if not set)
-VITE_TENANT_ID=
-```
-
-### Run Locally
+## Local Development
 
 ```bash
 npm install
-npm run dev        # Vite dev server (no Express proxy — Claude calls will fail)
+npm run dev
 ```
 
-To run with the full Express proxy:
+Production build test:
 
 ```bash
 npm run build
-npm run start      # Builds then starts Express on port 4173
 ```
 
-### Deploy to Railway
+Run the Express server locally:
 
-Push to `main`. Railway auto-deploys via nixpacks. Set all env vars in the Railway dashboard under **Variables**.
-
----
-
-## Verifying Persistence in Production
-
-See `PERSISTENCE_VERIFICATION.md` in the workspace for a step-by-step guide:
-1. Open the production site
-2. Open DevTools → Console, filter by `[firestoreSession]`
-3. Run a 2–3 turn conversation
-4. Confirm `✅ patch written` log entries
-5. Cross-check in Firebase Console → `agentSessions` collection
+```bash
+npm run start
+```
 
 ---
 
-## Architecture Notes
+## Aquatrace Website Agents
 
-- **Token efficiency:** the interviewer uses compact context instead of full transcript replay — compressed internal state + last 3 messages only. The extractor also uses only the current structured patch plus the last 5 transcript messages, with a reduced `max_tokens` budget because it returns a compact JSON patch.
-- **Subagent roster:** 15 TMNT-named internal subagents defined in `subagentRoster.js`. Customers see only "Nexi". Foundation for per-client subagent sets is in Firestore (`tenants/{tenantId}/subagents/{id}`).
-- **Avatar state:** `resolveAvatarState()` in `avatarStateMap.js` drives animation — streaming/speaking signals take priority over machine state.
+Two Aquatrace website agents are now the next build lane after workspace closure:
+
+- **Brokk** � Donatello-style WordPress builder/operator for the existing Aquatrace site inside **Themify Ultra** and **Themify Builder / Pro Builder**
+- **Bragi** � article, SEO, metadata, internal-linking, and publish-prep specialist
+
+Brokk improves the current machine in place. Bragi prepares the content and search structure that feeds it.
+
+---
+
+## Notes
+
+- Client-facing Aquatrace language should stay plain and non-technical.
+- Avoid internal labels like tenant, Firestore, seed, sandbox, case-study, raw session IDs, or routing jargon in customer-visible UI.
+- Protected actions still require approval: real outbound sends, live env / credential changes, destructive irreversible actions, and external billing/account work.
