@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+const STORAGE_KEY = "aquatrace.websiteRequests";
 
 const REQUEST_TYPES = {
   brokk: {
@@ -164,20 +166,70 @@ const styles = {
     fontSize: 13,
     lineHeight: 1.6,
   },
+  historyCard: {
+    background: "#0B1120",
+    border: "1px solid #1E293B",
+    borderRadius: 16,
+    padding: 24,
+    display: "flex",
+    flexDirection: "column",
+    gap: 14,
+  },
+  historyItem: {
+    borderTop: "1px solid #1E293B",
+    paddingTop: 12,
+    display: "grid",
+    gap: 4,
+  },
+  historyTitle: {
+    margin: 0,
+    fontSize: 14,
+    fontWeight: 700,
+    color: "#E2E8F0",
+  },
+  historyMeta: {
+    margin: 0,
+    fontSize: 12,
+    color: "#94A3B8",
+  },
+  empty: {
+    margin: 0,
+    fontSize: 13,
+    color: "#64748B",
+  },
 };
+
+function createEmptyForm() {
+  return { change: "", page: "", goal: "", nextStep: "", notes: "" };
+}
 
 export function WebsiteRequestPanel({ initialType = "brokk", onBack }) {
   const [requestType, setRequestType] = useState(initialType);
-  const [form, setForm] = useState({
-    change: "",
-    page: "",
-    goal: "",
-    nextStep: "",
-    notes: "",
-  });
+  const [form, setForm] = useState(createEmptyForm());
   const [saved, setSaved] = useState(null);
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    setRequestType(initialType);
+    setSaved(null);
+  }, [initialType]);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        setHistory(JSON.parse(raw));
+      }
+    } catch {
+      setHistory([]);
+    }
+  }, []);
 
   const current = REQUEST_TYPES[requestType];
+  const filteredHistory = useMemo(
+    () => history.filter((item) => item.requestType === requestType),
+    [history, requestType]
+  );
 
   function updateField(key, value) {
     setForm((currentForm) => ({ ...currentForm, [key]: value }));
@@ -185,14 +237,26 @@ export function WebsiteRequestPanel({ initialType = "brokk", onBack }) {
 
   function handleSubmit(event) {
     event.preventDefault();
-    setSaved({ type: current.title, ...form });
+    const entry = {
+      id: crypto.randomUUID(),
+      requestType,
+      type: current.title,
+      status: "Saved",
+      savedAt: new Date().toISOString(),
+      ...form,
+    };
+    const nextHistory = [entry, ...history].slice(0, 12);
+    setHistory(nextHistory);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextHistory));
+    setSaved(entry);
+    setForm(createEmptyForm());
   }
 
   return (
     <div style={styles.page}>
       <div style={styles.shell}>
         <button type="button" style={styles.backBtn} onClick={onBack}>
-          ? Back to Workspace
+          ← Back to Workspace
         </button>
 
         <div style={styles.card}>
@@ -208,10 +272,7 @@ export function WebsiteRequestPanel({ initialType = "brokk", onBack }) {
               <button
                 key={key}
                 type="button"
-                style={{
-                  ...styles.typeBtn,
-                  ...(requestType === key ? styles.typeBtnActive : {}),
-                }}
+                style={{ ...styles.typeBtn, ...(requestType === key ? styles.typeBtnActive : {}) }}
                 onClick={() => setRequestType(key)}
               >
                 <p style={styles.typeTitle}>{value.title}</p>
@@ -273,7 +334,7 @@ export function WebsiteRequestPanel({ initialType = "brokk", onBack }) {
 
             <div style={styles.footer}>
               <p style={styles.helper}>
-                {current.helper} This first version saves the request inside the workspace flow.
+                {current.helper} This version saves the request locally in the workspace so it can be reviewed.
               </p>
               <button type="submit" style={styles.submitBtn}>
                 {current.submit}
@@ -290,8 +351,28 @@ export function WebsiteRequestPanel({ initialType = "brokk", onBack }) {
               Goal: {saved.goal || "Not specified"}
               <br />
               Next step: {saved.nextStep || "Not specified"}
+              <br />
+              Status: {saved.status}
             </div>
           ) : null}
+        </div>
+
+        <div style={styles.historyCard}>
+          <p style={styles.label}>Recent Requests</p>
+          {filteredHistory.length === 0 ? (
+            <p style={styles.empty}>No saved requests yet for this view.</p>
+          ) : (
+            filteredHistory.map((item) => (
+              <div key={item.id} style={styles.historyItem}>
+                <p style={styles.historyTitle}>{item.page || "Untitled request"}</p>
+                <p style={styles.historyMeta}>Goal: {item.goal || "Not specified"}</p>
+                <p style={styles.historyMeta}>Next step: {item.nextStep || "Not specified"}</p>
+                <p style={styles.historyMeta}>
+                  Status: {item.status} • Saved {new Date(item.savedAt).toLocaleString()}
+                </p>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
