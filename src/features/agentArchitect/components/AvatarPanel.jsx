@@ -69,8 +69,8 @@ export default function AvatarPanel({
     try {
       rive.stop();
       rive.play(animationName);
-    } catch (error) {
-      console.warn("[AvatarPanel] could not play animation for:", conversationState, error);
+    } catch (_error) {
+      // Silently fall back if the requested animation is unavailable.
     }
   }, [conversationState, isSpeaking, rive]);
 
@@ -144,4 +144,3 @@ export default function AvatarPanel({
     </div>
   );
 }
-
