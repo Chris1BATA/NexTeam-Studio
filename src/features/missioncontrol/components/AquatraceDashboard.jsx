@@ -404,7 +404,7 @@ export function AquatraceDashboard() {
           <span style={S.navLink}>Playbooks</span>
         </div>
 
-        <button style={S.chatBtn} onClick={() => navigate(WORKSPACE)}>
+        <button style={S.chatBtn} onClick={() => navigate(`${WORKSPACE}?tab=website&request=${item.title === "Request Website Change" ? "brokk" : "bragi"}`)}>
           Chat with Njord
         </button>
       </nav>
@@ -528,4 +528,5 @@ export function AquatraceDashboard() {
     </div>
   );
 }
+
 

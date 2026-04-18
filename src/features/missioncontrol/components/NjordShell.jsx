@@ -2,8 +2,8 @@
  * NjordShell - tabbed nav wrapper for the Aquatrace workspace.
  */
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { NjordMissionControl } from "./NjordMissionControl";
 import { NjordSessionLog } from "./NjordSessionLog";
 import { SOPLibrary } from "./SOPLibrary";
@@ -107,8 +107,24 @@ const S = {
 
 export function NjordShell() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("chat");
   const [sopEditorMode, setSopEditorMode] = useState(null);
+
+  const requestType = searchParams.get("request") === "bragi" ? "bragi" : "brokk";
+
+  useEffect(() => {
+    if (searchParams.get("tab") === "website") {
+      setActiveTab("website");
+    }
+  }, [searchParams]);
+
+  function clearWebsiteParams() {
+    const next = new URLSearchParams(searchParams);
+    next.delete("tab");
+    next.delete("request");
+    setSearchParams(next, { replace: true });
+  }
 
   function handleCreateNew() {
     setActiveTab("sop-editor");
@@ -151,6 +167,7 @@ export function NjordShell() {
             onClick={() => {
               setActiveTab(tab.id);
               if (tab.id !== "sop-editor") setSopEditorMode(null);
+              if (tab.id !== "website") clearWebsiteParams();
             }}
           >
             <span>{tab.icon}</span>
@@ -163,8 +180,11 @@ export function NjordShell() {
         {activeTab === "chat" && <NjordMissionControl />}
         {activeTab === "website" && (
           <WebsiteRequestPanel
-            initialType="brokk"
-            onBack={() => setActiveTab("chat")}
+            initialType={requestType}
+            onBack={() => {
+              clearWebsiteParams();
+              setActiveTab("chat");
+            }}
           />
         )}
         {activeTab === "session-log" && <NjordSessionLog />}
