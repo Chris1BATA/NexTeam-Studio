@@ -13,7 +13,7 @@ export default function AvatarPanel({
   height = 400,
   showGlow = true,
   showDebugLabel = false,
-  showWordHighlight = true
+  showWordHighlight = false
 }) {
   const { rive, RiveComponent } = useRive({
     src,
@@ -144,3 +144,4 @@ export default function AvatarPanel({
     </div>
   );
 }
+
