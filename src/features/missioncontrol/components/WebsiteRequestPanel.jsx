@@ -15,6 +15,8 @@ const REQUEST_TYPES = {
   },
 };
 
+const STATUS_OPTIONS = ["Saved", "In Review", "Planned", "Done"];
+
 const styles = {
   page: {
     minHeight: "100%",
@@ -59,6 +61,12 @@ const styles = {
   title: {
     margin: 0,
     fontSize: 28,
+    fontWeight: 700,
+    color: "#F8FAFC",
+  },
+  sectionTitle: {
+    margin: 0,
+    fontSize: 18,
     fontWeight: 700,
     color: "#F8FAFC",
   },
@@ -166,6 +174,33 @@ const styles = {
     fontSize: 13,
     lineHeight: 1.6,
   },
+  toolbar: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+    alignItems: "center",
+  },
+  statusRow: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  filterBtn: {
+    background: "#111827",
+    color: "#CBD5E1",
+    border: "1px solid #334155",
+    borderRadius: 999,
+    padding: "6px 10px",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  filterBtnActive: {
+    borderColor: "#4F46E5",
+    color: "#FFFFFF",
+    boxShadow: "0 0 0 1px #4F46E5 inset",
+  },
   historyCard: {
     background: "#0B1120",
     border: "1px solid #1E293B",
@@ -179,13 +214,7 @@ const styles = {
     borderTop: "1px solid #1E293B",
     paddingTop: 12,
     display: "grid",
-    gap: 4,
-  },
-  historyTitle: {
-    margin: 0,
-    fontSize: 14,
-    fontWeight: 700,
-    color: "#E2E8F0",
+    gap: 8,
   },
   historyMeta: {
     margin: 0,
@@ -197,10 +226,49 @@ const styles = {
     fontSize: 13,
     color: "#64748B",
   },
+  itemFooter: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+    alignItems: "center",
+  },
+  statusSelect: {
+    background: "#111827",
+    color: "#E2E8F0",
+    border: "1px solid #334155",
+    borderRadius: 8,
+    padding: "8px 10px",
+    fontSize: 12,
+  },
+  statusPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    width: "fit-content",
+    padding: "4px 8px",
+    borderRadius: 999,
+    background: "#1E3A8A",
+    color: "#DBEAFE",
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+  },
 };
 
 function createEmptyForm() {
   return { change: "", page: "", goal: "", nextStep: "", notes: "" };
+}
+
+function readHistory() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 export function WebsiteRequestPanel({ initialType = "brokk", onBack }) {
@@ -208,6 +276,7 @@ export function WebsiteRequestPanel({ initialType = "brokk", onBack }) {
   const [form, setForm] = useState(createEmptyForm());
   const [saved, setSaved] = useState(null);
   const [history, setHistory] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("All");
 
   useEffect(() => {
     setRequestType(initialType);
@@ -215,24 +284,23 @@ export function WebsiteRequestPanel({ initialType = "brokk", onBack }) {
   }, [initialType]);
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        setHistory(JSON.parse(raw));
-      }
-    } catch {
-      setHistory([]);
-    }
+    setHistory(readHistory());
   }, []);
 
   const current = REQUEST_TYPES[requestType];
-  const filteredHistory = useMemo(
-    () => history.filter((item) => item.requestType === requestType),
-    [history, requestType]
-  );
+  const filteredHistory = useMemo(() => {
+    const typed = history.filter((item) => item.requestType === requestType);
+    if (statusFilter === "All") return typed;
+    return typed.filter((item) => item.status === statusFilter);
+  }, [history, requestType, statusFilter]);
 
   function updateField(key, value) {
     setForm((currentForm) => ({ ...currentForm, [key]: value }));
+  }
+
+  function saveHistory(nextHistory) {
+    setHistory(nextHistory);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextHistory));
   }
 
   function handleSubmit(event) {
@@ -245,11 +313,18 @@ export function WebsiteRequestPanel({ initialType = "brokk", onBack }) {
       savedAt: new Date().toISOString(),
       ...form,
     };
-    const nextHistory = [entry, ...history].slice(0, 12);
-    setHistory(nextHistory);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextHistory));
+    const nextHistory = [entry, ...history].slice(0, 20);
+    saveHistory(nextHistory);
     setSaved(entry);
     setForm(createEmptyForm());
+    setStatusFilter("All");
+  }
+
+  function updateStatus(id, nextStatus) {
+    const nextHistory = history.map((item) =>
+      item.id === id ? { ...item, status: nextStatus } : item
+    );
+    saveHistory(nextHistory);
   }
 
   return (
@@ -358,18 +433,54 @@ export function WebsiteRequestPanel({ initialType = "brokk", onBack }) {
         </div>
 
         <div style={styles.historyCard}>
-          <p style={styles.label}>Recent Requests</p>
+          <div style={styles.toolbar}>
+            <div>
+              <p style={styles.label}>Recent Requests</p>
+              <h2 style={styles.sectionTitle}>Review and Status</h2>
+            </div>
+            <div style={styles.statusRow}>
+              {["All", ...STATUS_OPTIONS].map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  style={{
+                    ...styles.filterBtn,
+                    ...(statusFilter === status ? styles.filterBtnActive : {}),
+                  }}
+                  onClick={() => setStatusFilter(status)}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {filteredHistory.length === 0 ? (
             <p style={styles.empty}>No saved requests yet for this view.</p>
           ) : (
             filteredHistory.map((item) => (
               <div key={item.id} style={styles.historyItem}>
-                <p style={styles.historyTitle}>{item.page || "Untitled request"}</p>
+                <span style={styles.statusPill}>{item.status}</span>
+                <p style={styles.typeTitle}>{item.page || "Untitled request"}</p>
                 <p style={styles.historyMeta}>Goal: {item.goal || "Not specified"}</p>
                 <p style={styles.historyMeta}>Next step: {item.nextStep || "Not specified"}</p>
-                <p style={styles.historyMeta}>
-                  Status: {item.status} • Saved {new Date(item.savedAt).toLocaleString()}
-                </p>
+                <p style={styles.historyMeta}>Notes: {item.notes || "No extra notes"}</p>
+                <div style={styles.itemFooter}>
+                  <p style={styles.historyMeta}>
+                    Saved {new Date(item.savedAt).toLocaleString()}
+                  </p>
+                  <select
+                    value={item.status}
+                    style={styles.statusSelect}
+                    onChange={(event) => updateStatus(item.id, event.target.value)}
+                  >
+                    {STATUS_OPTIONS.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             ))
           )}
