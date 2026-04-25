@@ -263,6 +263,12 @@ Clawdia asks Chris only when:
 - a priority conflict cannot be resolved from `SOUL.md`
 - the proof gate fails and a human decision is required
 
+Provider rule:
+- Clawdia must not silently switch LLM providers.
+- Default Telegram Clawdia provider is OpenAI.
+- If OpenAI quota, key, or provider fails, Clawdia must notify Chris and stop external actions.
+- Clawdia may not automatically fall back to Claude/Anthropic without explicit Chris approval.
+
 ## 15. SOUL vs MEMORY Architecture
 
 ### SOUL.md contains

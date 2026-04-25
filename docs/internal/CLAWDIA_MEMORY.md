@@ -78,6 +78,9 @@ Hard rules:
 - Dashboard remains parked.
 - Only Bragi currently has `SOUL.md`.
 - Clawdia is not yet in `AGENT_REGISTRY.md`.
+- Telegram Clawdia should use OpenAI.
+- Claude is advisor and pressure-testing only.
+- Current Telegram blockers are OpenAI quota and a second active Telegram poller.
 
 ## 6. Client Architecture Log
 
