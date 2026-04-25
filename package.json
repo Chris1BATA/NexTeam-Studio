@@ -7,12 +7,17 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "npm run build && node server.js"
+    "start": "npm run build && node server.js",
+    "bragi:cron:dry-run": "node scripts/bragi-cron-foundation.mjs --dry-run",
+    "bragi:cron:schedule": "node scripts/bragi-cron-foundation.mjs --schedule",
+    "bragi:wordpress:draft": "node scripts/run-bragi-aquatrace.mjs"
   },
   "dependencies": {
     "@rive-app/react-canvas": "^4.27.3",
     "express": "^4.19.2",
     "firebase": "^12.11.0",
+    "googleapis": "^171.4.0",
+    "nodemailer": "^8.0.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.2",
