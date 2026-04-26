@@ -1,5 +1,11 @@
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
+import {
+  buildBragiPackageSkeleton,
+  getBragiContinuitySchedule,
+  loadAquatraceBragiLibrary,
+  selectBragiTopic,
+} from "../src/features/missioncontrol/services/bragiContinuityService.js";
 
 const SOUL_PATH = join(process.cwd(), "docs", "BRAGI_SOUL.md");
 const LOG_DIR = join(process.cwd(), "tmp-proof");
@@ -32,6 +38,10 @@ function loadBragiSoul() {
 function buildPlannedArticleJob() {
   const now = new Date();
   const runId = `bragi-dry-run-${now.toISOString().replaceAll(":", "-")}`;
+  const library = loadAquatraceBragiLibrary();
+  const topic = selectBragiTopic({ library });
+  const packageSkeleton = buildBragiPackageSkeleton({ topic, library });
+  const schedule = getBragiContinuitySchedule();
 
   return {
     runId,
@@ -42,14 +52,22 @@ function buildPlannedArticleJob() {
     workflowStage: "cron-foundation",
     action: "planned-article-job-created",
     publishAction: "disabled",
-    wordpressExecution: "disabled",
+    wordpressExecution: "draft-ready-but-not-triggered",
+    dailyTopicCheck: schedule.dailyTopicCheck,
+    weeklyDraftCreation: schedule.weeklyDraftCreation,
     plannedJob: {
       clientId: "aquatrace",
-      topicSeed: "pool leak detection article planning placeholder",
+      topicSeed: topic.title,
+      focusKeyphrase: packageSkeleton.focusKeyphrase,
+      whyTopicChosen: packageSkeleton.whyTopicChosen,
+      searchIntent: packageSkeleton.searchIntent,
       targetAudience: "local pool owners, hotel and HOA managers, property managers",
       requestedOutput: "article package planning only",
-      nextUnlockedStep: "WordPress skill"
-    }
+      nextUnlockedStep: "weekly draft creation",
+      author: packageSkeleton.author,
+      category: packageSkeleton.category,
+      secondaryCategory: packageSkeleton.secondaryCategory,
+    },
   };
 }
 

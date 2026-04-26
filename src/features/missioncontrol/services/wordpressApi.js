@@ -50,3 +50,48 @@ export async function createWordPressPost({ siteUrl, authHeader, fields }) {
     body: JSON.stringify(fields),
   });
 }
+
+export async function uploadWordPressMedia({
+  siteUrl,
+  authHeader,
+  filename,
+  mimeType,
+  buffer,
+  title,
+  altText,
+  caption,
+  description,
+}) {
+  const base = siteUrl.replace(/\/$/, "");
+  const response = await fetch(`${base}/wp-json/wp/v2/media`, {
+    method: "POST",
+    headers: wordpressJsonHeaders(authHeader, {
+      "Content-Type": mimeType,
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    }),
+    body: buffer,
+  });
+
+  const text = await response.text();
+  const media = text ? JSON.parse(text) : null;
+  if (!response.ok) {
+    throw new Error(`Media upload failed ${response.status}: ${text}`);
+  }
+
+  if (!title && !altText && !caption && !description) {
+    return media;
+  }
+
+  return fetchJson(`${base}/wp-json/wp/v2/media/${media.id}`, {
+    method: "POST",
+    headers: wordpressJsonHeaders(authHeader, {
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      title,
+      alt_text: altText,
+      caption,
+      description,
+    }),
+  });
+}

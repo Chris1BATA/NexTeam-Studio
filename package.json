@@ -12,9 +12,12 @@
     "vgb:campaign:dry-run": "node scripts/test-vgb-controlled-flow.mjs",
     "bragi:cron:dry-run": "node scripts/bragi-cron-foundation.mjs --dry-run",
     "bragi:cron:schedule": "node scripts/bragi-cron-foundation.mjs --schedule",
+    "bragi:continuity:dry-run": "node scripts/bragi-continuity-dry-run.mjs",
     "bragi:wordpress:draft": "node scripts/run-bragi-aquatrace.mjs",
+    "bragi:notify-email:test": "node scripts/test-bragi-notification-email.mjs",
     "bragi:telegram:test-notify": "node scripts/test-bragi-telegram-notification.mjs",
-    "bragi:telegram:test-command": "node scripts/test-bragi-telegram-command.mjs"
+    "bragi:telegram:test-command": "node scripts/test-bragi-telegram-command.mjs",
+    "companycam:test-readonly": "node scripts/companycam-test-readonly.mjs"
   },
   "dependencies": {
     "@rive-app/react-canvas": "^4.27.3",

@@ -13,6 +13,9 @@ export async function executeBragiWordpressDraft({
   content,
   slug,
   excerpt,
+  author,
+  categories,
+  featuredMedia,
   commentStatus = "closed",
   pingStatus = "closed",
   yoast,
@@ -37,6 +40,13 @@ export async function executeBragiWordpressDraft({
   if (content) postUpdate.content = content;
   if (slug) postUpdate.slug = slug;
   if (excerpt) postUpdate.excerpt = excerpt;
+  if (Number.isFinite(Number(author))) postUpdate.author = Number(author);
+  if (Array.isArray(categories) && categories.length) {
+    postUpdate.categories = categories.map((value) => Number(value)).filter((value) => Number.isFinite(value));
+  }
+  if (Number.isFinite(Number(featuredMedia))) {
+    postUpdate.featured_media = Number(featuredMedia);
+  }
   postUpdate.status = "draft";
   postUpdate.comment_status = commentStatus;
   postUpdate.ping_status = pingStatus;

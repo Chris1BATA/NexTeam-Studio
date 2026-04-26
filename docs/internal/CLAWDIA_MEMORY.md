@@ -137,3 +137,79 @@ Correction rule:
 2. Verify Bragi weekly draft continuity.
 3. Commit safe completed work.
 4. Keep dashboard parked.
+
+## 12. Bragi Continuity Update
+
+- Bragi standing schedule is now defined as:
+  - daily topic and research check at `6:30 AM` Eastern
+  - weekly draft target every Monday at `7:00 AM` Eastern
+- Bragi remains draft only.
+- Bragi may not publish live or schedule live without Chris approval.
+- Bragi article packages now require:
+  - `1,400-1,600` words
+  - default public author `Chris Sears`
+  - primary category `Swimming Pool Leak Detection`
+  - one optional secondary category only
+  - complete Yoast field set
+  - internal links applied and recommended
+  - backlink opportunities
+  - external link recommendations only when the source quality is clear
+  - one featured image recommendation plus `3-5` supporting image recommendations
+- Bragi draft notification workflow is:
+  - create or update WordPress draft
+  - email Chris the draft package
+  - keep status draft only until Chris approves
+- Bragi photo workflow rules now include:
+  - one clear photo type per recommendation
+  - rewrite metadata to match the actual uploaded image
+  - mark `needs human review` instead of guessing when the image is unclear
+- Gmail reply reading and attachment ingestion are still not wired.
+- WordPress media upload helper is prepared, but photo ingestion and placement are still future workflow work.
+
+## 13. CompanyCam / Dropbox Planning Update
+
+- CompanyCam remains planned as read-only only.
+- CompanyCam token safety rule:
+  - token belongs only in local `.env` as `COMPANYCAM_API_TOKEN`
+  - never print it
+  - never commit it
+  - never hardcode it
+- Current CompanyCam local token status is not stored in memory as a value; only presence checks are allowed.
+- CompanyCam read-only target data:
+  - project name
+  - city
+  - state
+  - ZIP when available
+  - general project type
+  - photo timestamps
+  - photo tags or labels
+  - selected photo metadata
+  - reports or checklists when available
+- CompanyCam must not expose:
+  - full street address
+  - customer names unless approved
+  - phone numbers
+  - emails
+  - faces
+  - license plates
+  - private homeowner details
+- CompanyCam -> Dropbox remains dry-run planning only.
+- Future dry-run should show:
+  - CompanyCam project
+  - inferred Dropbox target path
+  - photo and report counts
+  - duplicate skip behavior
+  - whether manual review is needed
+
+## 14. Future Telegram Photo Workflow
+
+- Once Telegram routing is stable again, Bragi or Clawdia can send the draft URL through Telegram.
+- Chris can reply with labeled photos:
+  - `Featured`
+  - `Photo 1`
+  - `Photo 2`
+  - `Photo 3`
+  - `Photo 4`
+  - `Photo 5`
+- Bragi can later download those photos, upload them to WordPress, set the featured image, place supporting images, and rewrite metadata to match the actual photos.
+- No publish or schedule should happen through that flow without Chris approval.

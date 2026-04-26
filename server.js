@@ -23,6 +23,7 @@ import {
   logVgbSendResult,
   verifyControlledSendProtection,
 } from "./src/features/missioncontrol/services/vgbControlledCampaignService.js";
+import { buildBragiNotificationEmail } from "./src/features/missioncontrol/services/bragiContinuityService.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 loadLocalEnv();
@@ -221,6 +222,9 @@ app.post("/api/bragi/wordpress/execute", async (req, res) => {
       excerpt: articlePackage.excerpt,
       commentStatus: articlePackage.commentStatus || "closed",
       pingStatus: articlePackage.pingStatus || "closed",
+      author: articlePackage.authorId,
+      categories: articlePackage.categoryIds,
+      featuredMedia: articlePackage.featuredMediaId,
       yoast: articlePackage.yoast,
       credentials,
     });
@@ -248,9 +252,27 @@ app.post("/api/bragi/wordpress/execute", async (req, res) => {
       });
     }
 
+    if (body.notifyEmail && result?.postId) {
+      await sendBragiDraftNotificationEmail({
+        articlePackage,
+        draftResult: result,
+      });
+    }
+
     return res.json({ ok: true, result });
   } catch (err) {
     console.error("[bragi/wordpress/execute] error:", err.message);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.post("/api/bragi/notify-email", async (req, res) => {
+  try {
+    const { articlePackage, draftResult } = req.body || {};
+    const result = await sendBragiDraftNotificationEmail({ articlePackage, draftResult });
+    return res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error("[bragi/notify-email] error:", err.message);
     return res.status(500).json({ ok: false, error: err.message });
   }
 });
@@ -546,6 +568,43 @@ function buildGmailRawMessage({ fromName, fromAddress, toAddress, subject, body,
 
   lines.push(`--${boundary}--`, "");
   return Buffer.from(lines.join("\r\n")).toString("base64url");
+}
+
+async function sendGmailMessage({ toAddress, subject, body, attachments = [] }) {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REDIRECT_URI || !GMAIL_SEND_FROM || !GOOGLE_REFRESH_TOKEN) {
+    throw new Error("Google email settings are not configured on the server.");
+  }
+
+  const client = createGoogleOAuthClient();
+  client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
+  const gmail = google.gmail({ version: "v1", auth: client });
+  const safeAttachments = sanitizeEmailAttachments(attachments);
+  const raw = buildGmailRawMessage({
+    fromName: GMAIL_SEND_AS_NAME,
+    fromAddress: GMAIL_SEND_FROM,
+    toAddress,
+    subject,
+    body,
+    attachments: safeAttachments,
+  });
+
+  const response = await gmail.users.messages.send({ userId: "me", requestBody: { raw } });
+  return {
+    messageId: response.data.id,
+    attachmentCount: safeAttachments.length,
+    sentAt: new Date().toISOString(),
+  };
+}
+
+async function sendBragiDraftNotificationEmail({ articlePackage, draftResult }) {
+  const toAddress = "chris@aquatraceleak.com";
+  const { subject, body } = buildBragiNotificationEmail({ articlePackage, draftResult });
+  const sent = await sendGmailMessage({ toAddress, subject, body });
+  return {
+    toAddress,
+    subject,
+    ...sent,
+  };
 }
 
 function loadLocalEnv() {
