@@ -1,7 +1,7 @@
-# CLAWDIA — MEMORY.md
+# CLAWDIA - MEMORY.md
 - version: 1.0
 - status: active
-- last_updated: 2026-04-25
+- last_updated: 2026-04-26
 - owner: NexTeam Studio
 - scope: internal operating memory
 
@@ -36,12 +36,14 @@ Hard rules:
 ## 3. Current Active Lanes
 
 ### Revenue Now
-- VGB controlled campaign flow
+- CompanyCam cleanup, safe commit, and repeatable operation
 
 ### Standing SEO Garden
 - Bragi weekly Aquatrace article draft continuity
 
 ### Parked
+- VGB controlled campaign flow until CompanyCam and Bragi are stable
+- Telegram work until CompanyCam and Bragi are stable
 - dashboard or UI
 - Forge
 - Google Photos automation
@@ -69,6 +71,44 @@ Hard rules:
 - attachment send verified using Clawdia avatar at `C:\Users\Peyto\.openclaw\workspace\avatars\clawdia-full-body.png`
 - no bulk send occurred
 
+### CompanyCam / Dropbox
+
+COMPANYCAM 2026 FULL TRANSFER - COMPLETE
+
+- Protocol confirmation: `AGENT_BUILD_PROTOCOL.md` loaded and confirmed.
+- Command run:
+  `node C:\Users\Peyto\NexTeam-Studio\scripts\companycam-transfer-2026.mjs`
+- Total 2026 projects found: `50`
+- Total unique properties found: `48`
+- Total projects transferred: `48`
+- Total projects skipped as already synced: `2`
+- Total unique properties synced: `48`
+- Total unique properties not synced: `0`
+- Total photos downloaded: `736`
+- Total photos skipped: `18`
+- Total documents/reports downloaded: `31`
+- Total checklists downloaded: `58`
+- Total errors: `0`
+- Completion email sent: `yes`
+- Email message ID: `19dca57b4431bbbe`
+
+Confirmed:
+- Sync manifest is stored at:
+  `C:\Users\Peyto\Dropbox\Business\Aquatrace LLC\Aquatrace\_System\CompanyCam Sync\companycam_sync_manifest.json`
+- Transfer log is stored at:
+  `C:\Users\Peyto\Dropbox\Business\Aquatrace LLC\Aquatrace\_System\CompanyCam Sync\companycam_2026_transfer_log.json`
+- Metadata, manifests, and logs are stored under:
+  `C:\Users\Peyto\Dropbox\Business\Aquatrace LLC\Aquatrace\_System\CompanyCam Sync\`
+- No JSON metadata was placed directly into customer folders during the resumed 2026 run.
+- CompanyCam was not modified.
+- CompanyCam token was not printed.
+- No projects outside 2026 were downloaded.
+
+Important note:
+- Legacy test-era `CompanyCam Metadata` folders still exist under the prior Michael Whelan and Kyle Brookshire customer folders from earlier controlled testing.
+- These were not created or modified during the resumed full 2026 run.
+- They are a cleanup item, not a transfer blocker.
+
 ## 5. Current Known Blockers
 
 - Clawdia direct-send interface is not wired yet; Atlas executes sends as Clawdia's execution hand when needed.
@@ -81,6 +121,11 @@ Hard rules:
 - Telegram Clawdia should use OpenAI.
 - Claude is advisor and pressure-testing only.
 - Current Telegram blockers are OpenAI quota and a second active Telegram poller.
+- CompanyCam 2026 transfer is complete and is no longer the active blocker lane.
+- Next CompanyCam lane is cleanup, safe commit, and repeatable operation.
+- Bragi remains draft only; no article may be published or scheduled without Chris approval.
+- VGB remains parked until CompanyCam and Bragi are stable.
+- Telegram remains parked until CompanyCam and Bragi are stable.
 
 ## 6. Client Architecture Log
 
@@ -89,7 +134,7 @@ Hard rules:
 - reference implementation #1
 - uses Norse client-facing agent structure
 - Bragi content lane is active
-- VGB campaign is the active revenue lane
+- VGB campaign is parked until CompanyCam and Bragi are stable
 
 ### Future Clients
 - should receive Norse-style client-facing deployments
@@ -133,10 +178,10 @@ Correction rule:
 
 ## 11. Current Next Actions
 
-1. Finish VGB controlled campaign flow.
-2. Verify Bragi weekly draft continuity.
-3. Commit safe completed work.
-4. Keep dashboard parked.
+1. Prepare cleanup for legacy `CompanyCam Metadata` test folders without deleting anything until Chris approves.
+2. Commit safe CompanyCam transfer and operational memory updates.
+3. Keep Bragi draft only and maintain weekly draft continuity.
+4. Keep VGB and Telegram parked until CompanyCam and Bragi are stable.
 
 ## 12. Bragi Continuity Update
 
@@ -168,7 +213,7 @@ Correction rule:
 
 ## 13. CompanyCam / Dropbox Planning Update
 
-- CompanyCam remains planned as read-only only.
+- CompanyCam is operating in read-only mode only.
 - CompanyCam token safety rule:
   - token belongs only in local `.env` as `COMPANYCAM_API_TOKEN`
   - never print it
@@ -193,8 +238,8 @@ Correction rule:
   - faces
   - license plates
   - private homeowner details
-- CompanyCam -> Dropbox remains dry-run planning only.
-- Future dry-run should show:
+- CompanyCam -> Dropbox 2026 full transfer is complete.
+- Future repeatable sync should show:
   - CompanyCam project
   - inferred Dropbox target path
   - photo and report counts
