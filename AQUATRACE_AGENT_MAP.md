@@ -52,3 +52,33 @@ This map is for Aquatrace (proven first client). The skeleton (front-door -> scr
 
 ## Discipline reminder
 One target at a time. Nothing here gets built until Bragi ships. Default to plumbing; reserve agents for genuine judgment. Don't spawn agents where a pipe will do.
+
+## GBP Location & Service-Area Strategy (preserve - do not act without review)
+
+### The governing rule
+The profile follows the STAFF, not the plan. Google allows a separate Google Business Profile only for a location where someone is genuinely BASED/STATIONED (a real staffed branch). It does NOT allow separate profiles for cities you only TRAVEL to from an existing base - that is a spam pattern and risks suspension. Business structure (franchise vs. in-house branch) doesn't matter to Google; what matters is whether a person's work home-base is physically in that area. An in-house company branch with a local manager stationed there DOES qualify for its own profile.
+
+### The test for any new location
+Ask: "Is there a person whose work home-base is that location?"
+- YES -> eligible for its own profile (staffed branch).
+- NO, we drive there for jobs -> it's a SERVICE AREA on an existing profile, not a new profile.
+
+### Current state (as of this session)
+- Fair Play SC - real base, Chris operates from there. Legitimate profile.
+- Gainesville FL - existing profile, several years old, stable, producing posts + reviews. DECISION: LEAVE IT UNDISTURBED. Do not edit, "fix," or re-verify it. A working profile flying under the radar is an asset; poking it can trigger a review. Do NOT treat Gainesville's success as proof the travel-city-profile model is safe to replicate.
+- Myrtle Beach SC, Charleston SC - verified profiles under the account.
+
+### Expansion plan (travel markets: Tallahassee, Panama City, Pensacola, Jacksonville, St. Augustine, Daytona, Cocoa Beach, Orlando)
+- For now these are TRAVEL markets (Chris + Logan drive in as needed). Correct tool = SERVICE AREAS on existing profiles, NOT new profiles.
+- Gainesville profile can carry the FL-east/central service areas (Jax, St. Augustine, Daytona, Cocoa, Orlando - within range).
+- Far-west FL (Tallahassee, Panama City, Pensacola) - assign to closest base or flag as a stretch; don't over-spread.
+- Google limit: 20 service areas per profile. List where work is ACTUALLY performed consistently, not a wishlist. Tighter = more defensible.
+- A new BRANCH profile (e.g. Jax-to-Cocoa territory under Logan) is created ONLY when that staff presence is actually real - i.e., when Logan is physically based there running it. The profile is EARNED by the staffing existing, not created in advance to "set up the territory." 2026 verification often requires video showing branded materials, tools, vehicle, and presence in that area - which can't be produced for a territory nobody operates yet.
+
+### Critical risk note
+The danger is not Gainesville sitting quietly. The danger is that creating new profiles (or editing existing ones) draws Google's attention to the whole account and can trigger a sweep that exposes older technically-noncompliant profiles. Creating several new profiles in a burst also trips spam detection (too many verification requests at once). Therefore: fewer, realer profiles + service areas for travel. Each new profile must be genuinely defensible (real stationed staff) because adding it invites scrutiny.
+
+### Sequencing
+1. NOW (safe, anytime): add travel cities as SERVICE AREAS on existing profiles. Findable everywhere Aquatrace actually drives, zero suspension risk.
+2. LATER: create a branch profile per new market ONLY when real local staff are stationed there. Give each a UNIQUE description + location-specific posts (never copy-paste - duplicate content suppresses all profiles).
+3. This entire GBP expansion is downstream of the locked current target (Bragi -> organic traction). Organic traction is what makes staffed expansion possible. Do not build franchise/branch GBP structure ahead of the staffing being real.
