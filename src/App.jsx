@@ -42,6 +42,12 @@ const MissionControlHome = lazy(() =>
     default: module.MissionControlHome
   }))
 );
+const GoogleBusinessProfileRail = lazy(() =>
+  import("./features/missioncontrol/components/GoogleBusinessProfileRail").then((module) => ({
+    default: module.GoogleBusinessProfileRail
+  }))
+);
+const NexiBlueprintBetaPage = lazy(() => import("./features/marketing/components/NexiBlueprintBetaPage"));
 
 function RouteFallback() {
   return (
@@ -67,6 +73,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/agent-architect" replace />} />
         <Route path="/agent-architect" element={<AgentArchitectShell />} />
+        <Route path="/nexi-blueprint-beta" element={<NexiBlueprintBetaPage />} />
         <Route path="/success" element={<SuccessScreen />} />
 
         {/* Operator: Lead sessions view — password-gated */}
@@ -95,6 +102,15 @@ export function App() {
           element={
             <AdminGate>
               <AquatraceDashboard />
+            </AdminGate>
+          }
+        />
+
+        <Route
+          path="/mission-control/google-business-profile"
+          element={
+            <AdminGate>
+              <GoogleBusinessProfileRail />
             </AdminGate>
           }
         />

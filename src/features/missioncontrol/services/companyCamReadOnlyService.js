@@ -1,5 +1,15 @@
 const COMPANYCAM_BASE_URL = "https://api.companycam.com/v2";
 
+function createCompanyCamApiError(message, { status, detail, data, responseText } = {}) {
+  const error = new Error(message);
+  error.name = "CompanyCamApiError";
+  error.status = status || 500;
+  error.detail = detail || null;
+  error.data = data ?? null;
+  error.responseText = responseText ?? null;
+  return error;
+}
+
 function getAuthHeaders(token) {
   if (!token) {
     throw new Error("COMPANYCAM_API_TOKEN is not configured.");
@@ -31,7 +41,12 @@ async function fetchCompanyCam(pathname, token, query = {}) {
 
   if (!response.ok) {
     const detail = typeof data === "string" ? data : JSON.stringify(data);
-    throw new Error(`CompanyCam request failed ${response.status}: ${detail}`);
+    throw createCompanyCamApiError(`CompanyCam request failed ${response.status}: ${detail}`, {
+      status: response.status,
+      detail,
+      data,
+      responseText: text,
+    });
   }
 
   return data;
@@ -49,8 +64,25 @@ export async function listCompanyCamProjects({ token = process.env.COMPANYCAM_AP
   });
 }
 
+export async function listCompanyCamPhotos({
+  token = process.env.COMPANYCAM_API_TOKEN,
+  perPage = 100,
+  query,
+  modifiedSince,
+} = {}) {
+  return fetchCompanyCam("/photos", token, {
+    per_page: perPage,
+    query,
+    modified_since: modifiedSince,
+  });
+}
+
 export async function getCompanyCamProject({ token = process.env.COMPANYCAM_API_TOKEN, projectId }) {
   return fetchCompanyCam(`/projects/${projectId}`, token);
+}
+
+export async function getCompanyCamPhoto({ token = process.env.COMPANYCAM_API_TOKEN, photoId }) {
+  return fetchCompanyCam(`/photos/${photoId}`, token);
 }
 
 export async function listCompanyCamProjectPhotos({ token = process.env.COMPANYCAM_API_TOKEN, projectId, perPage = 10 } = {}) {

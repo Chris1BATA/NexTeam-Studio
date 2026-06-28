@@ -5,19 +5,26 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:gbp": "node scripts/run-gbp-local-dev.mjs",
+    "rail:local-api": "node scripts/run-rail-local-api.mjs",
     "server": "node server.js",
     "build": "vite build",
     "preview": "vite preview",
     "start": "npm run build && node server.js",
     "vgb:campaign:dry-run": "node scripts/test-vgb-controlled-flow.mjs",
     "bragi:cron:dry-run": "node scripts/bragi-cron-foundation.mjs --dry-run",
+    "bragi:cron:live": "node scripts/bragi-cron-foundation.mjs --live",
     "bragi:cron:schedule": "node scripts/bragi-cron-foundation.mjs --schedule",
+    "bragi:cron:live-schedule": "node scripts/bragi-cron-foundation.mjs --schedule --live",
     "bragi:continuity:dry-run": "node scripts/bragi-continuity-dry-run.mjs",
     "bragi:wordpress:draft": "node scripts/run-bragi-aquatrace.mjs",
+    "bragi:mode-b": "node scripts/run-bragi-mode-b.mjs",
     "bragi:notify-email:test": "node scripts/test-bragi-notification-email.mjs",
     "bragi:telegram:test-notify": "node scripts/test-bragi-telegram-notification.mjs",
     "bragi:telegram:test-command": "node scripts/test-bragi-telegram-command.mjs",
-    "companycam:test-readonly": "node scripts/companycam-test-readonly.mjs"
+    "companycam:test-readonly": "node scripts/companycam-test-readonly.mjs",
+    "gbp:rail:test": "node scripts/test-gbp-rail.mjs",
+    "rail:local-api:test": "node scripts/test-local-rail-api.mjs"
   },
   "dependencies": {
     "@rive-app/react-canvas": "^4.27.3",

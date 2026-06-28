@@ -7,6 +7,10 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { executeBragiWordpressDraft } from "./src/features/missioncontrol/services/bragiWordpressService.js";
 import {
+  GOOGLE_BUSINESS_PROFILE_LIVE_TEST_BLOCK_NOTE,
+  createGoogleBusinessProfileRailService,
+} from "./src/features/missioncontrol/services/googleBusinessProfileRailService.js";
+import {
   attachTelegramMessageToDraft,
   buildDraftApprovalMessage,
   getBragiApprovalStatePath,
@@ -29,6 +33,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 loadLocalEnv();
 const app = express();
 const PORT = process.env.PORT || 3001;
+const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || "";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
@@ -39,19 +44,28 @@ const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_USERNAME = process.env.SMTP_USERNAME;
 const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
 const SMTP_FROM_ADDRESS = process.env.SMTP_FROM_ADDRESS;
-const SMTP_FROM_NAME = process.env.SMTP_FROM_NAME || "Chris Sears ? Aquatrace Swimming Pool Leak Detection";
+const DEFAULT_OPERATIONAL_FROM_NAME = "Chris Sears - Aquatrace Swimming Pool Leak Detection";
+const SMTP_FROM_NAME = process.env.SMTP_FROM_NAME || DEFAULT_OPERATIONAL_FROM_NAME;
 const GOOGLE_OAUTH_CREDENTIALS_PATH = join(__dirname, "credentials", "nexteam-gmail-oauth.json");
 const googleOAuthSettings = loadGoogleOAuthSettings();
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || googleOAuthSettings.clientId;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || googleOAuthSettings.clientSecret;
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || googleOAuthSettings.redirectUri;
+const googleBusinessProfileRailService = createGoogleBusinessProfileRailService({
+  appRoot: __dirname,
+});
 const GMAIL_SEND_FROM = process.env.GMAIL_SEND_FROM;
-const GMAIL_SEND_AS_NAME = process.env.GMAIL_SEND_AS_NAME || "Chris Sears ? Aquatrace Swimming Pool Leak Detection";
+const GMAIL_SEND_AS_NAME = process.env.GMAIL_SEND_AS_NAME || DEFAULT_OPERATIONAL_FROM_NAME;
 const GOOGLE_REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
 const CLAWDIA_REFERENCE_MANIFEST_PATH = join(__dirname, "docs", "internal", "clawdia", "reference-files.json");
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHRIS_CHAT_ID = process.env.TELEGRAM_CHRIS_CHAT_ID;
 const BRAGI_TELEGRAM_WEBHOOK_SECRET = process.env.BRAGI_TELEGRAM_WEBHOOK_SECRET || "";
+const WORDPRESS_BASE_URL = process.env.WORDPRESS_BASE_URL || "";
+const WORDPRESS_USERNAME = process.env.WORDPRESS_USERNAME || "";
+const WORDPRESS_APP_PASSWORD = process.env.WORDPRESS_APP_PASSWORD || "";
+const WORDPRESS_EDITOR_USERNAME = process.env.WORDPRESS_EDITOR_USERNAME || "";
+const WORDPRESS_EDITOR_PASSWORD = process.env.WORDPRESS_EDITOR_PASSWORD || "";
 const GMAIL_ALLOWED_ATTACHMENT_TYPES = new Set([
   "image/png",
   "image/jpeg",
@@ -59,8 +73,116 @@ const GMAIL_ALLOWED_ATTACHMENT_TYPES = new Set([
   "application/pdf",
 ]);
 const GMAIL_ATTACHMENT_SIZE_LIMIT_BYTES = 10 * 1024 * 1024;
+const GOOGLE_OAUTH_SCOPE_PRESETS = {
+  "gmail-send": ["https://www.googleapis.com/auth/gmail.send"],
+  "clawdia-command-loop": [
+    "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/gmail.modify",
+  ],
+};
 
 app.use(express.json({ limit: "15mb" }));
+
+function filterProxyResponseHeader(name) {
+  const lower = String(name || "").toLowerCase();
+  return !["connection", "content-encoding", "content-length", "keep-alive", "transfer-encoding"].includes(lower);
+}
+
+function renderDevServerUnavailablePage({ targetUrl, requestPath }) {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>NexTeam GBP Rail Dev Server</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #07111f;
+        color: #e2e8f0;
+        font-family: system-ui, -apple-system, sans-serif;
+        padding: 24px;
+      }
+      main {
+        max-width: 720px;
+        background: rgba(2, 6, 23, 0.92);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        border-radius: 18px;
+        padding: 28px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 28px;
+      }
+      p {
+        line-height: 1.6;
+        color: #cbd5e1;
+      }
+      code {
+        background: rgba(15, 23, 42, 0.95);
+        padding: 2px 6px;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>GBP rail callback caught the OAuth redirect, but the Vite app is not running.</h1>
+      <p>The backend on port <code>${PORT}</code> is live, so the OAuth callback path is reachable. The frontend dev server expected at <code>${targetUrl}</code> is unavailable for <code>${requestPath}</code>.</p>
+      <p>Start the local GBP dev command with <code>npm run dev:gbp</code>, then reopen <code>http://127.0.0.1:5173/mission-control/google-business-profile</code>.</p>
+    </main>
+  </body>
+</html>`;
+}
+
+async function proxyDevRequestToVite(req, res) {
+  if (!VITE_DEV_SERVER_URL || !["GET", "HEAD"].includes(req.method)) {
+    return false;
+  }
+
+  const targetUrl = new URL(req.originalUrl || req.url, VITE_DEV_SERVER_URL).toString();
+
+  try {
+    const upstream = await fetch(targetUrl, {
+      method: req.method,
+      headers: {
+        Accept: req.headers.accept || "*/*",
+        "User-Agent": req.headers["user-agent"] || "NexTeam-Studio/GBP-Dev-Proxy",
+      },
+    });
+
+    res.status(upstream.status);
+    upstream.headers.forEach((value, key) => {
+      if (filterProxyResponseHeader(key)) {
+        res.setHeader(key, value);
+      }
+    });
+
+    if (req.method === "HEAD") {
+      res.end();
+      return true;
+    }
+
+    const body = Buffer.from(await upstream.arrayBuffer());
+    res.end(body);
+    return true;
+  } catch (error) {
+    console.error("[vite-dev-proxy] error:", error.message);
+    res
+      .status(502)
+      .setHeader("Content-Type", "text/html; charset=utf-8")
+      .send(
+        renderDevServerUnavailablePage({
+          targetUrl: VITE_DEV_SERVER_URL,
+          requestPath: req.originalUrl || req.url,
+        })
+      );
+    return true;
+  }
+}
 
 // Anthropic proxy — POST /api/anthropic/v1/messages
 app.post("/api/anthropic/v1/messages", async (req, res) => {
@@ -213,6 +335,12 @@ app.post("/api/bragi/wordpress/execute", async (req, res) => {
     const body = req.body || {};
     const articlePackage = body.articlePackage || body;
     const credentials = body.credentials || getAquatraceWordpressCredentials();
+    const notifyEmail = body.notifyEmail !== false;
+    let emailNotification = {
+      ok: false,
+      attempted: false,
+      blocker: "",
+    };
 
     const result = await executeBragiWordpressDraft({
       postId: articlePackage.postId,
@@ -252,14 +380,37 @@ app.post("/api/bragi/wordpress/execute", async (req, res) => {
       });
     }
 
-    if (body.notifyEmail && result?.postId) {
-      await sendBragiDraftNotificationEmail({
-        articlePackage,
-        draftResult: result,
-      });
+    if (notifyEmail && result?.postId) {
+      try {
+        const sent = await sendBragiDraftNotificationEmail({
+          articlePackage,
+          draftResult: result,
+        });
+        emailNotification = {
+          ok: true,
+          attempted: true,
+          ...sent,
+        };
+      } catch (error) {
+        emailNotification = {
+          ok: false,
+          attempted: true,
+          blocker: String(error?.message || "Bragi review email failed."),
+        };
+      }
     }
 
-    return res.json({ ok: true, result });
+    return res.json({
+      ok: true,
+      result: {
+        ...result,
+        notification: {
+          email: emailNotification,
+        },
+        credentialSource: body.credentials ? "request_payload" : credentials.credentialSource || "unknown",
+        editorCredentialSource: body.credentials ? "request_payload" : credentials.editorCredentialSource || "unknown",
+      },
+    });
   } catch (err) {
     console.error("[bragi/wordpress/execute] error:", err.message);
     return res.status(500).json({ ok: false, error: err.message });
@@ -371,13 +522,16 @@ app.post("/api/bragi/telegram/test-command", async (req, res) => {
   }
 });
 
-app.get("/auth/google/start", (_req, res) => {
+app.get("/auth/google/start", (req, res) => {
   try {
     const client = createGoogleOAuthClient();
+    const { mode, scopes } = resolveGoogleOAuthScopeSelection(req.query);
     const url = client.generateAuthUrl({
       access_type: "offline",
       prompt: "consent",
-      scope: ["https://www.googleapis.com/auth/gmail.send"],
+      include_granted_scopes: true,
+      scope: scopes,
+      state: mode,
     });
     return res.redirect(url);
   } catch (err) {
@@ -385,8 +539,69 @@ app.get("/auth/google/start", (_req, res) => {
   }
 });
 
+app.get("/auth/google/gbp/connect", (req, res) => {
+  try {
+    const request = googleBusinessProfileRailService.createConnectRequest({
+      accountLabel: req.query.accountLabel,
+      loginHint: req.query.loginHint,
+      returnTo: req.query.returnTo,
+    });
+
+    return res.redirect(request.url);
+  } catch (err) {
+    return res.status(400).send(err.message);
+  }
+});
+
 app.get("/auth/google/callback", async (req, res) => {
   try {
+    const rawState = typeof req.query.state === "string" ? req.query.state : "";
+    const googleError = typeof req.query.error === "string" ? req.query.error : "";
+
+    if (rawState.includes(".")) {
+      const parsedState = googleBusinessProfileRailService.parseState(rawState);
+      const returnTo = parsedState?.returnTo || "/mission-control/google-business-profile";
+      const redirectUrl = new URL(returnTo, "http://127.0.0.1:5173");
+
+      if (googleError) {
+        redirectUrl.searchParams.set("oauth", "error");
+        redirectUrl.searchParams.set("message", googleError);
+        return res.redirect(`${redirectUrl.pathname}${redirectUrl.search}`);
+      }
+
+      const code = req.query.code;
+      if (!code) {
+        redirectUrl.searchParams.set("oauth", "error");
+        redirectUrl.searchParams.set("message", "Missing authorization code.");
+        return res.redirect(`${redirectUrl.pathname}${redirectUrl.search}`);
+      }
+
+      const callbackResult = await googleBusinessProfileRailService.handleOAuthCallback({
+        code,
+        state: rawState,
+      });
+
+      try {
+        await googleBusinessProfileRailService.syncConnectionDirectory(callbackResult.accountKey);
+        redirectUrl.searchParams.set("oauth", "connected");
+        redirectUrl.searchParams.set("accountKey", callbackResult.accountKey);
+      } catch (syncError) {
+        redirectUrl.searchParams.set(
+          "oauth",
+          syncError?.snapshot?.blockedByGoogleApproval ? "inventory-blocked" : "error"
+        );
+        redirectUrl.searchParams.set("accountKey", callbackResult.accountKey);
+        redirectUrl.searchParams.set(
+          "message",
+          syncError?.snapshot?.error?.detail ||
+            syncError?.message ||
+            GOOGLE_BUSINESS_PROFILE_LIVE_TEST_BLOCK_NOTE
+        );
+      }
+
+      return res.redirect(`${redirectUrl.pathname}${redirectUrl.search}`);
+    }
+
     const client = createGoogleOAuthClient();
     const code = req.query.code;
     if (!code) return res.status(400).send("Missing authorization code.");
@@ -396,6 +611,32 @@ app.get("/auth/google/callback", async (req, res) => {
     );
   } catch (err) {
     return res.status(500).send('OAuth callback failed: ' + err.message);
+  }
+});
+
+app.get("/api/gbp/connections", (_req, res) => {
+  try {
+    return res.json({
+      ok: true,
+      connections: googleBusinessProfileRailService.listConnections(),
+    });
+  } catch (err) {
+    console.error("[gbp/connections] error:", err.message);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.post("/api/gbp/connections/:accountKey/sync", async (req, res) => {
+  try {
+    const result = await googleBusinessProfileRailService.syncConnectionDirectory(req.params.accountKey);
+    return res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error("[gbp/connections/sync] error:", err.message);
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err.message,
+      snapshot: err.snapshot || null,
+    });
   }
 });
 
@@ -525,16 +766,58 @@ function sanitizeEmailAttachments(attachments) {
   });
 }
 
+function normalizeOperationalEmailText(value) {
+  return String(value || "")
+    .replace(/\u200B|\u200C|\u200D|\uFEFF/g, "")
+    .replace(/\u00A0/g, " ")
+    .replace(/â€‹/g, "")
+    .replace(/â€™|’/g, "'")
+    .replace(/â€œ|â€|“|”/g, '"')
+    .replace(/â€”|â€“|—|–/g, "-")
+    .replace(/…/g, "...")
+    .replace(/•/g, "-")
+    .replace(/Â/g, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+}
+
+function toAsciiOperationalEmailText(value) {
+  return normalizeOperationalEmailText(value)
+    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function sanitizeEmailHeaderValue(value) {
+  return toAsciiOperationalEmailText(value)
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function sanitizeEmailBodyValue(value) {
+  return toAsciiOperationalEmailText(value)
+    .replace(/\n/g, "\r\n");
+}
+
 function buildGmailRawMessage({ fromName, fromAddress, toAddress, subject, body, attachments = [] }) {
+  const safeFromName = sanitizeEmailHeaderValue(fromName);
+  const safeFromAddress = sanitizeEmailHeaderValue(fromAddress);
+  const safeToAddress = sanitizeEmailHeaderValue(toAddress);
+  const safeSubject = sanitizeEmailHeaderValue(subject);
+  const safeBody = sanitizeEmailBodyValue(body);
+
   if (!attachments.length) {
     const lines = [
-      `From: ${fromName} <${fromAddress}>`,
-      `To: ${toAddress}`,
-      `Subject: ${subject}`,
+      `From: ${safeFromName} <${safeFromAddress}>`,
+      `To: ${safeToAddress}`,
+      `Subject: ${safeSubject}`,
       "MIME-Version: 1.0",
       "Content-Type: text/plain; charset=utf-8",
+      "Content-Transfer-Encoding: 7bit",
       "",
-      body,
+      safeBody,
     ];
 
     return Buffer.from(lines.join("\r\n")).toString("base64url");
@@ -542,9 +825,9 @@ function buildGmailRawMessage({ fromName, fromAddress, toAddress, subject, body,
 
   const boundary = `nexteam-${Date.now().toString(36)}`;
   const lines = [
-    `From: ${fromName} <${fromAddress}>`,
-    `To: ${toAddress}`,
-    `Subject: ${subject}`,
+    `From: ${safeFromName} <${safeFromAddress}>`,
+    `To: ${safeToAddress}`,
+    `Subject: ${safeSubject}`,
     "MIME-Version: 1.0",
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
     "",
@@ -552,7 +835,7 @@ function buildGmailRawMessage({ fromName, fromAddress, toAddress, subject, body,
     "Content-Type: text/plain; charset=utf-8",
     "Content-Transfer-Encoding: 7bit",
     "",
-    body,
+    safeBody,
   ];
 
   for (const attachment of attachments) {
@@ -639,7 +922,7 @@ function loadGoogleOAuthSettings() {
   }
 
   try {
-    const parsed = JSON.parse(readFileSync(GOOGLE_OAUTH_CREDENTIALS_PATH, "utf8"));
+    const parsed = JSON.parse(String(readFileSync(GOOGLE_OAUTH_CREDENTIALS_PATH, "utf8")).replace(/^\uFEFF/, ""));
     const credentials = parsed.web || parsed.installed || {};
 
     return {
@@ -660,13 +943,60 @@ function createGoogleOAuthClient() {
   return new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
 }
 
+function resolveGoogleOAuthScopeSelection(query = {}) {
+  const rawMode = typeof query.mode === "string" ? query.mode.trim().toLowerCase() : "";
+  const rawScopes = typeof query.scopes === "string" ? query.scopes.trim() : "";
+
+  if (rawScopes) {
+    const scopes = [...new Set(
+      rawScopes
+        .split(/[,\s]+/)
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+    )];
+
+    if (scopes.length > 0) {
+      return {
+        mode: rawMode || "custom",
+        scopes,
+      };
+    }
+  }
+
+  const mode = rawMode && GOOGLE_OAUTH_SCOPE_PRESETS[rawMode] ? rawMode : "gmail-send";
+  return {
+    mode,
+    scopes: GOOGLE_OAUTH_SCOPE_PRESETS[mode],
+  };
+}
+
 function getAquatraceWordpressCredentials() {
   const appPasswordRaw = getReferenceText("docs/internal/clawdia/reference/aquatrace/aquatrace-wordpress-application-password.txt");
   const editorLoginRaw = getReferenceText("docs/internal/clawdia/reference/aquatrace/aquatrace-wordpress-editor-login.txt");
 
-  const apiPassword = appPasswordRaw.match(/Password\s*\r?\n([^\r\n]+)/i)?.[1]?.trim();
-  const editorUsername = editorLoginRaw.match(/Username\s*\r?\n([^\r\n]+)/i)?.[1]?.trim();
-  const editorPassword = editorLoginRaw.match(/Password\s*\r?\n([^\r\n]+)/i)?.[1]?.trim();
+  const fallbackApiPassword = appPasswordRaw.match(/Password\s*\r?\n([^\r\n]+)/i)?.[1]?.trim() || "";
+  const fallbackEditorUsername = editorLoginRaw.match(/Username\s*\r?\n([^\r\n]+)/i)?.[1]?.trim() || "";
+  const fallbackEditorPassword = editorLoginRaw.match(/Password\s*\r?\n([^\r\n]+)/i)?.[1]?.trim() || "";
+
+  if (WORDPRESS_BASE_URL && WORDPRESS_USERNAME && WORDPRESS_APP_PASSWORD) {
+    return {
+      siteUrl: WORDPRESS_BASE_URL,
+      apiUsername: WORDPRESS_USERNAME,
+      apiPassword: WORDPRESS_APP_PASSWORD,
+      editorUsername: WORDPRESS_EDITOR_USERNAME || fallbackEditorUsername || WORDPRESS_USERNAME,
+      editorPassword: WORDPRESS_EDITOR_PASSWORD || fallbackEditorPassword || "",
+      credentialSource: "named_env_vars",
+      editorCredentialSource: WORDPRESS_EDITOR_PASSWORD
+        ? "named_env_editor_credentials"
+        : fallbackEditorUsername && fallbackEditorPassword
+          ? "reference_editor_fallback"
+          : "none",
+    };
+  }
+
+  const apiPassword = fallbackApiPassword;
+  const editorUsername = fallbackEditorUsername;
+  const editorPassword = fallbackEditorPassword;
 
   if (!apiPassword || !editorUsername || !editorPassword) {
     throw new Error("Aquatrace WordPress credentials are incomplete.");
@@ -678,6 +1008,8 @@ function getAquatraceWordpressCredentials() {
     apiPassword,
     editorUsername,
     editorPassword,
+    credentialSource: "reference_files_fallback",
+    editorCredentialSource: "reference_editor_fallback",
   };
 }
 
@@ -710,12 +1042,21 @@ app.get("/api/internal/clawdia/reference-files/:fileId", (req, res) => {
 });
 
 // Serve built Vite app
-app.use(express.static(join(__dirname, "dist")));
+if (!VITE_DEV_SERVER_URL) {
+  app.use(express.static(join(__dirname, "dist")));
 
-// SPA fallback
-app.get("*", (_req, res) => {
-  res.sendFile(join(__dirname, "dist", "index.html"));
-});
+  // SPA fallback
+  app.get("*", (_req, res) => {
+    res.sendFile(join(__dirname, "dist", "index.html"));
+  });
+} else {
+  app.get("*", async (req, res) => {
+    const handled = await proxyDevRequestToVite(req, res);
+    if (!handled) {
+      res.status(404).send("Not found.");
+    }
+  });
+}
 
 createServer(app).listen(PORT, () => {
   console.log(`[server] listening on port ${PORT}`);

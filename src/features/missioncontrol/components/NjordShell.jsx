@@ -11,11 +11,17 @@ import { SOPEditor } from "./SOPEditor";
 import { BlueprintLibrary } from "./BlueprintLibrary";
 import { OnboardingChecklist } from "./OnboardingChecklist";
 import { WebsiteRequestPanel } from "./WebsiteRequestPanel";
+import { BragiArticleDashboard } from "./BragiArticleDashboard";
+import { VgbCampaignWorkspace } from "./VgbCampaignWorkspace";
+import { GooniesAdvisoryBench } from "./GooniesAdvisoryBench";
 import { NJORD_CONFIG } from "../config/njordConfig";
 
 const TABS = [
   { id: "chat", label: "Chat with Njord", icon: "??" },
   { id: "website", label: "Website Requests", icon: "??" },
+  { id: "bragi", label: "Bragi", icon: "??" },
+  { id: "vgb-campaign", label: "VGB Outreach", icon: "??" },
+  { id: "agents", label: "Agents", icon: "[] " },
   { id: "session-log", label: "Conversation History", icon: "??" },
   { id: "sop-library", label: "Playbooks", icon: "??" },
   { id: "blueprint-library", label: "Blueprints", icon: "??" },
@@ -117,6 +123,9 @@ export function NjordShell() {
     if (searchParams.get("tab") === "website") {
       setActiveTab("website");
     }
+    if (searchParams.get("tab") === "bragi") {
+      setActiveTab("bragi");
+    }
   }, [searchParams]);
 
   function clearWebsiteParams() {
@@ -187,6 +196,9 @@ export function NjordShell() {
             }}
           />
         )}
+        {activeTab === "bragi" && <BragiArticleDashboard />}
+        {activeTab === "vgb-campaign" && <VgbCampaignWorkspace />}
+        {activeTab === "agents" && <GooniesAdvisoryBench />}
         {activeTab === "session-log" && <NjordSessionLog />}
         {activeTab === "sop-library" && <SOPLibrary onCreateNew={handleCreateNew} />}
         {activeTab === "sop-editor" && (

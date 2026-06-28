@@ -390,89 +390,101 @@ export function buildBragiNotificationEmail({ articlePackage, draftResult }) {
   const safeDraft = draftResult || {};
   const draftUrl = safeDraft.draftUrl || safeDraft.link || "";
   const postId = safeDraft.postId || safeDraft.wordpress?.id || "";
-  const yoast = safePackage.yoast || {};
   const internalLinksApplied = safePackage.internalLinksApplied || [];
   const internalLinksRecommended = safePackage.internalLinksRecommended || [];
-  const backlinkOpportunities = safePackage.backlinkOpportunities || [];
-  const externalLinksRecommended = safePackage.externalLinksRecommended || [];
   const imageRecommendations = safePackage.imageRecommendations || [];
-
-  const subject = `Bragi has sent you the newest Aquatrace article - ${safePackage.title || "Aquatrace Draft"}`;
+  const articleTitle = safeOperationalEmailLine(
+    safePackage.title || safeDraft.wordpress?.title || "Aquatrace Draft",
+    "Aquatrace Draft"
+  );
+  const status = safeDraft.wordpress?.status || "draft";
+  const reviewContext = safeOperationalEmailLine(
+    safePackage.summary || safePackage.whyTopicChosen || safePackage.excerpt,
+    "No extra review context was provided."
+  );
+  const subject = `Aquatrace Article Review Package - ${articleTitle}`;
   const body = [
-    `Article title: ${safePackage.title || "Untitled draft"}`,
-    `Focus keyphrase: ${yoast.focusKeyphrase || safePackage.focusKeyphrase || "not provided"}`,
-    `Target word count: ${safePackage.targetWordCount || DEFAULT_WORD_COUNT}`,
-    `Draft URL: ${draftUrl || "not available"}`,
-    `Post ID: ${postId || "not available"}`,
-    `Category: ${safePackage.category || DEFAULT_PRIMARY_CATEGORY}`,
-    `Author: ${safePackage.author || DEFAULT_AUTHOR}`,
-    `Short summary: ${safePackage.summary || safePackage.excerpt || "not provided"}`,
-    `Why this topic was chosen: ${safePackage.whyTopicChosen || "not provided"}`,
+    `Draft URL: ${safeOperationalEmailLine(draftUrl, "not available")}`,
+    `Post ID: ${safeOperationalEmailLine(postId, "not available")}`,
+    `WordPress status: ${status}`,
+    `Published: ${status === "publish" ? "yes" : "no"}`,
+    `Scheduled: ${status === "future" ? "yes" : "no"}`,
     "",
-    "Yoast fields:",
-    `- SEO title: ${yoast.seoTitle || "not provided"}`,
-    `- Meta description: ${yoast.metaDescription || "not provided"}`,
-    `- Social title: ${yoast.socialTitle || "not provided"}`,
-    `- Social description: ${yoast.socialDescription || "not provided"}`,
-    `- Suggested excerpt: ${yoast.suggestedExcerpt || "not provided"}`,
+    `Article title: ${articleTitle}`,
     "",
-    "Internal links applied:",
-    ...formatLinkList(internalLinksApplied),
+    "Internal linking recommendations",
+    ...formatNumberedLinkRecommendations(internalLinksRecommended.length ? internalLinksRecommended : internalLinksApplied),
     "",
-    "Internal links recommended:",
-    ...formatLinkList(internalLinksRecommended),
+    "Photo and image recommendations",
+    ...formatNumberedImageRecommendations(imageRecommendations),
     "",
-    "Backlink/internal link opportunities:",
-    ...formatSimpleList(backlinkOpportunities, ({ title, anchorText, reason }) => `- ${title || "Untitled"} | ${anchorText || "anchor TBD"} | ${reason || "reason not provided"}`),
+    `Review context: ${reviewContext}`,
     "",
-    "External links recommended:",
-    ...formatSimpleList(externalLinksRecommended, ({ sourceName, url, reason }) => `- ${sourceName || "Source TBD"} | ${url || "URL pending review"} | ${reason || "reason not provided"}`),
-    "",
-    "Featured image recommendation:",
-    ...formatImageBlock(imageRecommendations.find((item) => item.label === "Featured Image")),
-    "",
-    "Supporting image recommendations:",
-    ...imageRecommendations
-      .filter((item) => item.label !== "Featured Image")
-      .flatMap((item) => formatImageBlock(item)),
-    "",
-    "Suggested action: APPROVED / REVISE / PARK",
-    "Status: Draft only. Not published.",
+    "Final status: Ready for Chris review - not published",
   ].join("\n");
 
-  return { subject, body };
+  return {
+    subject: safeOperationalEmailLine(subject, "Aquatrace Article Review Package - Aquatrace Draft"),
+    body: normalizeOperationalEmailValue(body),
+  };
 }
 
-function formatLinkList(items) {
+function normalizeOperationalEmailValue(value) {
+  return String(value || "")
+    .replace(/\u200B|\u200C|\u200D|\uFEFF/g, "")
+    .replace(/\u00A0/g, " ")
+    .replace(/â€‹/g, "")
+    .replace(/â€™|’/g, "'")
+    .replace(/â€œ|â€|“|”/g, '"')
+    .replace(/â€”|â€“|—|–/g, "-")
+    .replace(/…/g, "...")
+    .replace(/•/g, "-")
+    .replace(/Â/g, "")
+    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function safeOperationalEmailLine(value, fallback = "not provided") {
+  const cleaned = normalizeOperationalEmailValue(value);
+  return cleaned || fallback;
+}
+
+function formatNumberedLinkRecommendations(items) {
   if (!items.length) {
-    return ["- none listed"];
+    return ["1. Anchor text: not provided", "   URL: not provided", "   Why: no internal links were listed"];
   }
 
-  return items.map((item) => `- ${item.title || "Untitled"} | ${item.anchorText || "anchor TBD"} | ${item.url || "URL pending"} | ${item.reason || "reason not provided"}`);
+  return items.flatMap((item, index) => [
+    `${index + 1}. Anchor text: ${safeOperationalEmailLine(item.anchorText || item.title)}`,
+    `   URL: ${safeOperationalEmailLine(item.url)}`,
+    `   Why: ${safeOperationalEmailLine(item.reason)}`,
+  ]);
 }
 
-function formatSimpleList(items, formatter) {
+function formatNumberedImageRecommendations(items) {
   if (!items.length) {
-    return ["- none listed"];
+    return [
+      "1. Filename: not provided",
+      "   Title: not provided",
+      "   Alt text: not provided",
+      "   Caption: not provided",
+      "   Description: not provided",
+      "   Placement: not provided",
+    ];
   }
 
-  return items.map((item) => formatter(item));
-}
-
-function formatImageBlock(item) {
-  if (!item) {
-    return ["- none listed"];
-  }
-
-  return [
-    `- ${item.label}: ${item.photoType || "photo type not provided"}`,
-    `  Placement: ${item.placement || "not provided"}`,
-    `  Filename: ${item.filename || "not provided"}`,
-    `  Title: ${item.title || "not provided"}`,
-    `  Alt text: ${item.altText || "not provided"}`,
-    `  Caption: ${item.caption || "not provided"}`,
-    `  Description: ${item.description || "not provided"}`,
-  ];
+  return items.flatMap((item, index) => [
+    `${index + 1}. Filename: ${safeOperationalEmailLine(item.filename)}`,
+    `   Title: ${safeOperationalEmailLine(item.title)}`,
+    `   Alt text: ${safeOperationalEmailLine(item.altText)}`,
+    `   Caption: ${safeOperationalEmailLine(item.caption)}`,
+    `   Description: ${safeOperationalEmailLine(item.description)}`,
+    `   Placement: ${safeOperationalEmailLine(item.placement)}`,
+  ]);
 }
 
 export function buildCompanyCamDropboxDryRun(project) {

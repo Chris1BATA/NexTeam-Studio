@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const anthropicKey = env.ANTHROPIC_API_KEY || "";
+  const localApiProxyTarget = env.LOCAL_API_PROXY_TARGET || "http://127.0.0.1:3001";
 
   return {
     plugins: [react()],
@@ -11,6 +12,22 @@ export default defineConfig(({ mode }) => {
       port: process.env.PORT || 5173,
       host: "0.0.0.0",
       proxy: {
+        "/auth/google": {
+          target: localApiProxyTarget,
+          changeOrigin: true
+        },
+        "/api/gbp": {
+          target: localApiProxyTarget,
+          changeOrigin: true
+        },
+        "/api/vgb": {
+          target: localApiProxyTarget,
+          changeOrigin: true
+        },
+        "/api/bragi": {
+          target: localApiProxyTarget,
+          changeOrigin: true
+        },
         "/api/anthropic": {
           target: "https://api.anthropic.com",
           changeOrigin: true,

@@ -14,6 +14,9 @@ import { useCallback, useRef, useState } from "react";
 import { classifyIntent } from "../services/njordIntentClassifier.js";
 import { routeToNorseAgent } from "../services/njordRouter.js";
 import { initNjordSession, logNjordTurn, closeNjordSession } from "../services/njordSessionLogger.js";
+import { maybeRunClawdiaOperatorAction } from "../services/clawdiaOperatorService.js";
+import { loadClawdiaOperationalTruth } from "../services/clawdiaOperationalTruthService.js";
+import { maybeRunGoonieConsult } from "../services/gooniesConsultService.js";
 
 /**
  * @typedef {Object} NjordMessage
@@ -41,11 +44,13 @@ export function useNjordSession(sessionId) {
   const [thinking, setThinking] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const sessionRef = useRef(sessionId);
+  const operationalTruthRef = useRef(null);
 
   /** Initialize the Firestore session doc on first message. */
   const ensureSessionInit = useCallback(async () => {
     if (initialized) return;
     await initNjordSession(sessionRef.current, { source: "mission-control-ui" });
+    operationalTruthRef.current = loadClawdiaOperationalTruth();
     setInitialized(true);
   }, [initialized]);
 
@@ -84,6 +89,68 @@ export function useNjordSession(sessionId) {
       setThinking(true);
 
       try {
+        const clawdiaOperatorAction = await maybeRunClawdiaOperatorAction(
+          userInput,
+          operationalTruthRef.current
+        );
+        if (clawdiaOperatorAction?.handled) {
+          pushMessage({
+            role: "system",
+            content:
+              clawdiaOperatorAction.routeSummary
+                ? `→ Clawdia route: ${clawdiaOperatorAction.routeSummary}`
+                : "→ Clawdia checked the live action registry and operational truth before routing the request",
+            intent: "clawdia-operator",
+          });
+
+          await logNjordTurn(sessionRef.current, "agent", clawdiaOperatorAction.response, {
+            routedTo: "clawdia-operator",
+            agentName: "Clawdia",
+            intent: "clawdia-operator",
+            consultOnly: false,
+            stub: false,
+          });
+
+          pushMessage({
+            role: "agent",
+            content: clawdiaOperatorAction.response,
+            agentName: "Clawdia",
+            intent: "clawdia-operator",
+            stub: false,
+          });
+
+          return;
+        }
+
+        const goonieConsult = await maybeRunGoonieConsult(userInput);
+        if (goonieConsult?.handled) {
+          const goonieName = goonieConsult.goonie?.name || "Advisory Bench";
+
+          pushMessage({
+            role: "system",
+            content: `→ Advisory consult routed to ${goonieName} through the shared brain (consult-only)`,
+            intent: "goonie-consult",
+          });
+
+          await logNjordTurn(sessionRef.current, "agent", goonieConsult.response, {
+            routedTo: goonieConsult.goonie?.id || "goonie-clarify",
+            agentName: `Clawdia · ${goonieName}`,
+            intent: "goonie-consult",
+            consultOnly: true,
+            stub: false,
+          });
+
+          pushMessage({
+            role: "agent",
+            content: goonieConsult.response,
+            agentName: `Clawdia · ${goonieName}`,
+            intent: "goonie-consult",
+            stub: false,
+          });
+
+          return;
+        }
+
         // Classify intent
         const classification = classifyIntent(userInput);
 

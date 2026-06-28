@@ -15,6 +15,19 @@ Hard rule: completely isolated from Aquatrace — no shared anything, ever.
 
 ---
 
+## Internal Guardrails
+- No secrets in git. Never commit `.env`, tokens, API keys, refresh tokens, or credential files.
+- No live publishing, scheduling, bulk sends, or campaign sends without explicit approval.
+- CompanyCam must remain read-only from repo-controlled workflows.
+- Do not mix unrelated dirty worktree files into a commit.
+- Every completion claim must include a proof package.
+- `SOUL.md` defines stable identity and boundaries.
+- `MEMORY.md` defines current operating truth and can change as reality changes.
+- Reusable agent templates must stay white-label ready and must not hardcode client-specific facts.
+- See `docs/internal/CLAWDIA_COMPANYCAM_OPERATOR_RUNBOOK.md` and `docs/internal/tmnt/TMNT_AGENT_INDEX.md` for current internal operating guidance.
+
+---
+
 ## Phase 1 — Firestore Save ✅ COMPLETE
 Commit: 45bac44
 - Firestore save wired into standalone-agent-demo
