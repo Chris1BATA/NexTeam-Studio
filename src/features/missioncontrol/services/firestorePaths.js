@@ -1,64 +1,44 @@
 /**
- * firestorePaths.js — Centralized, normalized Firestore path construction
- * for all mission control collections.
+ * firestorePaths.js — Centralized Firestore path construction for mission
+ * control + tenant foundation collections.
  *
  * WHY THIS FILE EXISTS:
- *   Collection paths were previously built inline via template literals using
- *   raw config values. This file centralizes all path construction, enforces
- *   tenant ID allow-listing, and strips any path-injection characters before
- *   they reach Firestore.
- *
- * RULES:
- *   - All collection paths MUST go through these helpers.
- *   - Never call `collection(db, \`tenants/${someId}/...\`)` directly.
- *   - Tenant IDs must pass isSafeTenantId() — reject unknown tenants early.
+ *   - Shared code should never hand-roll Firestore paths from raw input.
+ *   - Tenant IDs must be safe path segments, but must NOT be tied to a static
+ *     allow-list. That blocks scale and is not real isolation.
+ *   - Foundation collections (intakePackets, config, runtimeSummary, subagents)
+ *     live alongside the older mission-control collections and should share the
+ *     same tenant/path guardrails.
  */
 
-/** Allowed tenant IDs. Must match isKnownTenant() in firestore.rules. */
-const KNOWN_TENANT_IDS = new Set([
-  "aquatrace-case-study",
-  "nexteam-studio"
-]);
+import {
+  sanitizeTenantId as sanitizeSegment,
+  isSafeTenantId,
+  assertSafeTenantId,
+  tenantRootDocPath,
+  tenantIntakePacketCollectionPath,
+  tenantIntakePacketDocPath,
+  tenantConfigCollectionPath,
+  tenantConfigDocPath,
+  tenantRuntimeSummaryCollectionPath,
+  tenantRuntimeSummaryDocPath,
+  tenantSubagentCollectionPath,
+  tenantSubagentDocPath,
+} from "../../tenancy/services/tenantPathUtils.js";
 
-/**
- * Strip characters that could be used to escape collection paths.
- * Firestore paths cannot contain '/' in a segment, but we also strip null bytes
- * and other control characters for defence-in-depth.
- *
- * @param {string} segment
- * @returns {string}
- */
-function sanitizeSegment(segment) {
-  if (typeof segment !== "string") return "";
-  return segment
-    .replace(/[/\x00-\x1F\x7F]/g, "") // remove slashes, control chars
-    .trim()
-    .slice(0, 128); // hard cap on length
-}
-
-/**
- * Returns true if the given tenantId is on the explicit allow-list.
- *
- * @param {string} tenantId
- * @returns {boolean}
- */
-export function isSafeTenantId(tenantId) {
-  return typeof tenantId === "string" && KNOWN_TENANT_IDS.has(tenantId);
-}
-
-/**
- * Assert a tenant ID is safe. Throws if not, so callers fail loudly in dev.
- *
- * @param {string} tenantId
- * @throws {Error}
- */
-export function assertSafeTenantId(tenantId) {
-  if (!isSafeTenantId(tenantId)) {
-    throw new Error(`[firestorePaths] Rejected unknown tenantId: "${tenantId}"`);
-  }
-}
-
-// ── collection path constants ────────────────────────────────────────────────
+export {
+  isSafeTenantId,
+  assertSafeTenantId,
+  tenantRootDocPath,
+  tenantIntakePacketCollectionPath,
+  tenantIntakePacketDocPath,
+  tenantConfigCollectionPath,
+  tenantConfigDocPath,
+  tenantRuntimeSummaryCollectionPath,
+  tenantRuntimeSummaryDocPath,
+  tenantSubagentCollectionPath,
+  tenantSubagentDocPath,
+};
 
 /**
  * Tenant-scoped SOP collection path.

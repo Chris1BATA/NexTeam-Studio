@@ -5,6 +5,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "test": "node --test \"src/**/*.test.mjs\"",
     "dev:gbp": "node scripts/run-gbp-local-dev.mjs",
     "rail:local-api": "node scripts/run-rail-local-api.mjs",
     "server": "node server.js",

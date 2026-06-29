@@ -21,6 +21,12 @@ import {
   serverTimestamp
 } from "firebase/firestore";
 import { getDefaultSubagents } from "../config/subagentroster.js";
+import {
+  assertSafeTenantId,
+  tenantRootDocPath,
+  tenantSubagentCollectionPath,
+  tenantSubagentDocPath,
+} from "../../tenancy/services/tenantPathUtils.js";
 
 /**
  * Initialize a new tenant with their default subagent set.
@@ -35,13 +41,14 @@ import { getDefaultSubagents } from "../config/subagentroster.js";
  */
 export async function initializeTenantSubagents(tenantId, tenantMeta = {}, subagentIds = null) {
   if (!tenantId) throw new Error("tenantId is required");
+  assertSafeTenantId(tenantId);
 
   const subagents = getDefaultSubagents();
   const enabledIds = subagentIds ?? subagents.map((s) => s.id);
   const enabledSet = new Set(enabledIds);
 
   // Write tenant root document
-  const tenantRef = doc(db, "tenants", tenantId);
+  const tenantRef = doc(db, tenantRootDocPath(tenantId));
   await setDoc(
     tenantRef,
     {
@@ -58,7 +65,7 @@ export async function initializeTenantSubagents(tenantId, tenantMeta = {}, subag
 
   // Write each subagent config document
   for (const subagent of subagents) {
-    const subRef = doc(db, "tenants", tenantId, "subagents", subagent.id);
+    const subRef = doc(db, tenantSubagentDocPath(tenantId, subagent.id));
     await setDoc(
       subRef,
       {
@@ -84,8 +91,9 @@ export async function initializeTenantSubagents(tenantId, tenantMeta = {}, subag
  */
 export async function getTenantSubagents(tenantId) {
   if (!tenantId) return [];
+  assertSafeTenantId(tenantId);
 
-  const subRef = collection(db, "tenants", tenantId, "subagents");
+  const subRef = collection(db, tenantSubagentCollectionPath(tenantId));
   const snapshot = await getDocs(subRef);
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
