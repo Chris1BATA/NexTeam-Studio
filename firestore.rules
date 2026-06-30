@@ -161,12 +161,14 @@ service cloud.firestore {
 
     function isPlatformOperator() {
       return request.auth != null
+          && request.auth.token.keys().hasAny(["role"])
           && request.auth.token.role is string
           && request.auth.token.role in ["nexteam_admin", "platform_operator"];
     }
 
     function isTenantActor(tenantId) {
       return request.auth != null
+          && request.auth.token.keys().hasAny(["tenantId"])
           && request.auth.token.tenantId is string
           && request.auth.token.tenantId == tenantId;
     }

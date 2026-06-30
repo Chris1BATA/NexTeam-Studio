@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "test": "node --test \"src/**/*.test.mjs\"",
+    "test:firestore-rules:emulator": "node scripts/run-firestore-rules-emulator-tests.mjs",
+    "test:firebase-auth-admin:emulator": "node scripts/run-firebase-auth-admin-emulator-tests.mjs",
     "dev:gbp": "node scripts/run-gbp-local-dev.mjs",
     "rail:local-api": "node scripts/run-rail-local-api.mjs",
     "server": "node server.js",
@@ -31,6 +33,7 @@
     "@rive-app/react-canvas": "^4.27.3",
     "express": "^4.19.2",
     "firebase": "^12.11.0",
+    "firebase-admin": "^14.1.0",
     "googleapis": "^171.4.0",
     "nodemailer": "^8.0.6",
     "react": "^19.2.4",
@@ -39,6 +42,7 @@
     "xstate": "^5.29.0"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@vitejs/plugin-react": "^4.3.4",
     "playwright": "^1.59.1",
     "vite": "^5.4.11"

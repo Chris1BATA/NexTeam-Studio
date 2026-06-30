@@ -1,5 +1,6 @@
-﻿import { lazy, Suspense } from "react";
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { FirebaseTenantAccessBootstrap } from "./features/auth/components/FirebaseTenantAccessBootstrap.jsx";
 
 const AgentArchitectShell = lazy(() =>
   import("./features/agentArchitect/components/AgentArchitectShell").then((module) => ({
@@ -69,81 +70,83 @@ function RouteFallback() {
 
 export function App() {
   return (
-    <Suspense fallback={<RouteFallback />}>
-      <Routes>
-        <Route path="/" element={<Navigate to="/agent-architect" replace />} />
-        <Route path="/agent-architect" element={<AgentArchitectShell />} />
-        <Route path="/nexi-blueprint-beta" element={<NexiBlueprintBetaPage />} />
-        <Route path="/success" element={<SuccessScreen />} />
+    <FirebaseTenantAccessBootstrap>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/agent-architect" replace />} />
+          <Route path="/agent-architect" element={<AgentArchitectShell />} />
+          <Route path="/nexi-blueprint-beta" element={<NexiBlueprintBetaPage />} />
+          <Route path="/success" element={<SuccessScreen />} />
 
-        {/* Operator: Lead sessions view — password-gated */}
-        <Route
-          path="/admin/sessions"
-          element={
-            <AdminGate>
-              <SessionsView />
-            </AdminGate>
-          }
-        />
+          {/* Operator: Lead sessions view — password-gated */}
+          <Route
+            path="/admin/sessions"
+            element={
+              <AdminGate>
+                <SessionsView />
+              </AdminGate>
+            }
+          />
 
-        {/* Mission Control client registry home */}
-        <Route
-          path="/mission-control/clients"
-          element={
-            <AdminGate>
-              <MissionControlHome />
-            </AdminGate>
-          }
-        />
+          {/* Mission Control client registry home */}
+          <Route
+            path="/mission-control/clients"
+            element={
+              <AdminGate>
+                <MissionControlHome />
+              </AdminGate>
+            }
+          />
 
-        {/* Aquatrace Mission Control dashboard — /mission-control/aquatrace */}
-        <Route
-          path="/mission-control/aquatrace"
-          element={
-            <AdminGate>
-              <AquatraceDashboard />
-            </AdminGate>
-          }
-        />
+          {/* Aquatrace Mission Control dashboard — /mission-control/aquatrace */}
+          <Route
+            path="/mission-control/aquatrace"
+            element={
+              <AdminGate>
+                <AquatraceDashboard />
+              </AdminGate>
+            }
+          />
 
-        <Route
-          path="/mission-control/google-business-profile"
-          element={
-            <AdminGate>
-              <GoogleBusinessProfileRail />
-            </AdminGate>
-          }
-        />
+          <Route
+            path="/mission-control/google-business-profile"
+            element={
+              <AdminGate>
+                <GoogleBusinessProfileRail />
+              </AdminGate>
+            }
+          />
 
-        {/* Aquatrace workspace — canonical URL; Njord is tab #1 (Chat) */}
-        {/* MissionControlGate removed: Aquatrace is a real NexTeam client; direct Njord access from workspace is approved */}
-        <Route
-          path="/mission-control/aquatrace/workspace"
-          element={
-            <AdminGate>
-              <NjordShell />
-            </AdminGate>
-          }
-        />
+          {/* Aquatrace workspace — canonical URL; Njord is tab #1 (Chat) */}
+          {/* MissionControlGate removed: Aquatrace is a real NexTeam client; direct Njord access from workspace is approved */}
+          <Route
+            path="/mission-control/aquatrace/workspace"
+            element={
+              <AdminGate>
+                <NjordShell />
+              </AdminGate>
+            }
+          />
 
-        {/* Old case-study URL — redirect to canonical workspace */}
-        <Route
-          path="/mission-control/aquatrace-case-study"
-          element={<Navigate to="/mission-control/aquatrace/workspace" replace />}
-        />
+          {/* Old case-study URL — redirect to canonical workspace */}
+          <Route
+            path="/mission-control/aquatrace-case-study"
+            element={<Navigate to="/mission-control/aquatrace/workspace" replace />}
+          />
 
-        {/* Legacy direct chat route — backwards compat */}
-        <Route
-          path="/mission-control"
-          element={
-            <AdminGate>
-              <MissionControlGate>
-                <NjordMissionControl />
-              </MissionControlGate>
-            </AdminGate>
-          }
-        />
-      </Routes>
-    </Suspense>
+          {/* Legacy direct chat route — backwards compat */}
+          <Route
+            path="/mission-control"
+            element={
+              <AdminGate>
+                <MissionControlGate>
+                  <NjordMissionControl />
+                </MissionControlGate>
+              </AdminGate>
+            }
+          />
+        </Routes>
+      </Suspense>
+    </FirebaseTenantAccessBootstrap>
   );
 }

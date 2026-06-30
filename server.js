@@ -28,6 +28,10 @@ import {
   verifyControlledSendProtection,
 } from "./src/features/missioncontrol/services/vgbControlledCampaignService.js";
 import { buildBragiNotificationEmail } from "./src/features/missioncontrol/services/bragiContinuityService.js";
+import {
+  applyTenantBootstrapClaims,
+  verifyFirebaseIdTokenFromAuthorizationHeader,
+} from "./src/server/firebaseAuthClaimsService.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 loadLocalEnv();
@@ -721,6 +725,60 @@ app.post("/api/vgb/send-email", async (req, res) => {
   } catch (err) {
     console.error("[vgb/send-email] error:", err.message);
     return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.post("/api/internal/firebase-auth/tenant-bootstrap", async (req, res) => {
+  try {
+    const authorization = req.get("authorization") || "";
+    const requestedTenantId = typeof req.body?.tenantId === "string" ? req.body.tenantId.trim() : null;
+    const { decodedToken } = await verifyFirebaseIdTokenFromAuthorizationHeader(authorization);
+    const result = await applyTenantBootstrapClaims({
+      idToken: authorization.replace(/^Bearer\s+/i, "").trim(),
+      requestedTenantId,
+    });
+
+    return res.json({
+      ok: true,
+      uid: result.uid,
+      email: result.email,
+      claims: result.claims,
+      actorScope: result.actorScope,
+      verifiedUser: {
+        uid: decodedToken.uid,
+        email: decodedToken.email || "",
+      },
+    });
+  } catch (err) {
+    const message = String(err?.message || "Firebase tenant bootstrap failed.");
+    const status =
+      /authorization|token|auth/i.test(message) ? 401 :
+      /tenant access|arbitrary tenant/i.test(message) ? 403 :
+      500;
+
+    console.error("[firebase-auth/tenant-bootstrap] error:", message);
+    return res.status(status).json({ ok: false, error: message });
+  }
+});
+
+app.get("/api/internal/firebase-auth/me", async (req, res) => {
+  try {
+    const authorization = req.get("authorization") || "";
+    const { decodedToken, actorScope } = await verifyFirebaseIdTokenFromAuthorizationHeader(authorization);
+    return res.json({
+      ok: true,
+      uid: decodedToken.uid,
+      email: decodedToken.email || "",
+      claims: {
+        tenantId: decodedToken.tenantId || null,
+        role: decodedToken.role || null,
+      },
+      actorScope,
+    });
+  } catch (err) {
+    const message = String(err?.message || "Firebase token verification failed.");
+    console.error("[firebase-auth/me] error:", message);
+    return res.status(401).json({ ok: false, error: message });
   }
 });
 
