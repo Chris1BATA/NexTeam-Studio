@@ -1,4 +1,4 @@
-import { db } from "../../../firebase.js";
+import { auth, db } from "../../../firebase.js";
 import { doc, setDoc, updateDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { DEFAULT_TENANT_ID } from "../config/tenantconfig.js";
 import { normalizePatch } from "../utils/normalizePatch.js";
@@ -6,6 +6,7 @@ import { normalizePatch } from "../utils/normalizePatch.js";
 // Track sessions that have already had their initial doc created this browser session
 // so we only set createdAt once per sessionId
 const _initializedSessions = new Set();
+const CONVERSATION_PROVISION_ENDPOINT = "/api/internal/tenants/provision-from-session";
 
 function normalizeAgentSessionDoc(data = {}) {
   if (!data || typeof data !== "object") return {};
@@ -34,7 +35,53 @@ function normalizeAgentSessionDoc(data = {}) {
       ? data.missingFields
       : Array.isArray(data.missing_fields)
         ? data.missing_fields
-        : []
+        : [],
+    ownerUid: data.ownerUid || "",
+    provisioning: data.provisioning && typeof data.provisioning === "object" ? data.provisioning : null,
+  };
+}
+
+async function postConversationProvisionRequest(sessionId) {
+  if (!auth.currentUser) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: "missing-firebase-user",
+    };
+  }
+
+  const idToken = await auth.currentUser.getIdToken();
+  const response = await fetch(CONVERSATION_PROVISION_ENDPOINT, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ sessionId }),
+  });
+
+  if (response.status === 404) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: "backend-route-unavailable",
+    };
+  }
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return {
+      ok: false,
+      skipped: false,
+      status: response.status,
+      error: String(payload?.error || "Conversation tenant provisioning failed."),
+    };
+  }
+
+  return {
+    ok: true,
+    skipped: false,
+    payload,
   };
 }
 
@@ -59,6 +106,7 @@ export async function applyAgentPatch(agentId, sessionId, patch, stage, missingF
       tenantId: DEFAULT_TENANT_ID,
       agentId,
       sessionId,
+      ownerUid: auth.currentUser?.uid || "",
       stage: stage || "unknown",
       missingFields: normalizedMissingFields,
       ...normalizedPatch,
@@ -113,10 +161,26 @@ export async function completeAgent(agentId, sessionId) {
     const ref = doc(db, "agentSessions", sessionId);
     await updateDoc(ref, {
       status: "completed",
+      ownerUid: auth.currentUser?.uid || "",
       completedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
     console.log(`[firestoreSession] ✅ session completed — path: agentSessions/${sessionId}`);
+
+    const provisioningResult = await postConversationProvisionRequest(sessionId);
+    if (!provisioningResult?.ok && !provisioningResult?.skipped) {
+      console.warn(
+        "[firestoreSession] conversation tenant provisioning did not complete:",
+        provisioningResult?.error || "unknown error",
+        "sessionId:",
+        sessionId
+      );
+    }
+
+    return {
+      sessionCompleted: true,
+      provisioning: provisioningResult,
+    };
   } catch (err) {
     console.error("[firestoreSession] ERROR completeAgent:", err.message, "sessionId:", sessionId);
   }

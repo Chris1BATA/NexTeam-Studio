@@ -16,9 +16,46 @@ import {
   onboardingSessionDocPath,
 } from "../features/missioncontrol/services/firestorePaths.js";
 import { createConversationTenantProvisioner } from "../features/tenancy/services/conversationTenantProvisioner.js";
+import { canAccessTenant, isPlatformOperator } from "../features/tenancy/services/tenantAccessPolicy.js";
 
 function clonePlainData(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+export function assertActorCanProvisionAgentSession({ actorScope = {}, decodedToken = {}, session = {} } = {}) {
+  if (!session || typeof session !== "object") {
+    throw new Error("Provisioning requires a real agent session document.");
+  }
+
+  const targetTenantId = String(session.tenantId || "").trim();
+  if (!targetTenantId) {
+    throw new Error(`Agent session "${session.id || session.sessionId || "unknown"}" is missing tenantId.`);
+  }
+
+  if (!canAccessTenant({ actorScope, targetTenantId })) {
+    throw new Error(
+      `Tenant access denied. Actor tenant "${actorScope.tenantId || "unknown"}" cannot provision session for tenant "${targetTenantId}".`
+    );
+  }
+
+  if (isPlatformOperator(actorScope)) {
+    return true;
+  }
+
+  const sessionOwnerUid = String(session.ownerUid || "").trim();
+  if (!sessionOwnerUid) {
+    throw new Error(
+      `Agent session "${session.id || session.sessionId || "unknown"}" cannot be self-provisioned because ownerUid is missing.`
+    );
+  }
+
+  if (String(decodedToken.uid || "").trim() !== sessionOwnerUid) {
+    throw new Error(
+      `Agent session "${session.id || session.sessionId || "unknown"}" is owned by a different Firebase user.`
+    );
+  }
+
+  return true;
 }
 
 export function createFirebaseConversationTenantProvisioningDependencies({ env = process.env } = {}) {

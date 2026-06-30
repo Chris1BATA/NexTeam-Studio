@@ -32,8 +32,11 @@ import {
   applyTenantBootstrapClaims,
   verifyFirebaseIdTokenFromAuthorizationHeader,
 } from "./src/server/firebaseAuthClaimsService.js";
-import { isPlatformOperator } from "./src/features/tenancy/services/tenantAccessPolicy.js";
-import { createFirebaseConversationTenantProvisioner } from "./src/server/firebaseConversationTenantProvisioningRepository.js";
+import {
+  assertActorCanProvisionAgentSession,
+  createFirebaseConversationTenantProvisioner,
+  createFirebaseConversationTenantProvisioningDependencies,
+} from "./src/server/firebaseConversationTenantProvisioningRepository.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 loadLocalEnv();
@@ -88,6 +91,7 @@ const GOOGLE_OAUTH_SCOPE_PRESETS = {
 };
 
 let cachedConversationTenantProvisioner = null;
+let cachedConversationTenantProvisioningDependencies = null;
 
 app.use(express.json({ limit: "15mb" }));
 
@@ -101,6 +105,13 @@ function getConversationTenantProvisioner() {
     cachedConversationTenantProvisioner = createFirebaseConversationTenantProvisioner();
   }
   return cachedConversationTenantProvisioner;
+}
+
+function getConversationTenantProvisioningDependencies() {
+  if (!cachedConversationTenantProvisioningDependencies) {
+    cachedConversationTenantProvisioningDependencies = createFirebaseConversationTenantProvisioningDependencies();
+  }
+  return cachedConversationTenantProvisioningDependencies;
 }
 
 function renderDevServerUnavailablePage({ targetUrl, requestPath }) {
@@ -796,25 +807,28 @@ app.get("/api/internal/firebase-auth/me", async (req, res) => {
 app.post("/api/internal/tenants/provision-from-session", async (req, res) => {
   try {
     const authorization = req.get("authorization") || "";
-    const { actorScope } = await verifyFirebaseIdTokenFromAuthorizationHeader(authorization);
-    if (!isPlatformOperator(actorScope)) {
-      return res.status(403).json({
-        ok: false,
-        error: "Platform operator access is required to provision tenants from completed sessions.",
-      });
-    }
+    const { decodedToken, actorScope } = await verifyFirebaseIdTokenFromAuthorizationHeader(authorization);
 
     const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId.trim() : "";
     if (!sessionId) {
       return res.status(400).json({ ok: false, error: "sessionId is required." });
     }
 
-    const result = await getConversationTenantProvisioner().provisionSessionById(sessionId);
+    const dependencies = getConversationTenantProvisioningDependencies();
+    const session = await dependencies.readAgentSession(sessionId);
+    if (!session) {
+      return res.status(404).json({ ok: false, error: `Agent session "${sessionId}" was not found.` });
+    }
+
+    assertActorCanProvisionAgentSession({ actorScope, decodedToken, session });
+
+    const result = await getConversationTenantProvisioner().provisionSession(session);
     return res.json(result);
   } catch (err) {
     const message = String(err?.message || "Tenant provisioner failed.");
     const status =
       /not found/i.test(message) ? 404 :
+      /owned by a different firebase user|tenant access denied|self-provisioned because owneruid is missing/i.test(message) ? 403 :
       /required|cannot provision|refusing to provision/i.test(message) ? 400 :
       /authorization|token|auth/i.test(message) ? 401 :
       500;
