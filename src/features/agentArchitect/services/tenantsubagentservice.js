@@ -4,8 +4,8 @@
  * Manages per-client subagent configuration in Firestore.
  *
  * Firestore paths:
- *   tenants/{tenantId}                    — tenant config document
- *   tenants/{tenantId}/subagents/{id}     — per-subagent config for this tenant
+ *   tenants/{tenantId}                - tenant config document
+ *   tenants/{tenantId}/subagents/{id} - per-subagent config for this tenant
  *
  * This is the groundwork for per-client Nexi instances backed by their
  * configured subagent set. Right now it writes the initial config;
@@ -13,26 +13,20 @@
  */
 
 import { db } from "../../../firebase.js";
-import {
-  doc,
-  setDoc,
-  collection,
-  getDocs,
-  serverTimestamp
-} from "firebase/firestore";
-import { getDefaultSubagents } from "../config/subagentroster.js";
+import { collection, doc, getDocs, serverTimestamp, setDoc } from "firebase/firestore";
 import {
   assertSafeTenantId,
   tenantRootDocPath,
   tenantSubagentCollectionPath,
   tenantSubagentDocPath,
 } from "../../tenancy/services/tenantPathUtils.js";
+import { buildTenantSubagentBootstrapPlan } from "./tenantSubagentBootstrap.js";
 
 /**
  * Initialize a new tenant with their default subagent set.
  * Creates the tenant doc and a subagent config doc for each enabled subagent.
  *
- * Safe to call on existing tenants — uses merge so it won't overwrite
+ * Safe to call on existing tenants - uses merge so it won't overwrite
  * manually customized subagent configs.
  *
  * @param {string} tenantId
@@ -43,44 +37,39 @@ export async function initializeTenantSubagents(tenantId, tenantMeta = {}, subag
   if (!tenantId) throw new Error("tenantId is required");
   assertSafeTenantId(tenantId);
 
-  const subagents = getDefaultSubagents();
-  const enabledIds = subagentIds ?? subagents.map((s) => s.id);
-  const enabledSet = new Set(enabledIds);
+  const bootstrapPlan = buildTenantSubagentBootstrapPlan({
+    tenantId,
+    tenantMeta,
+    subagentIds,
+  });
 
-  // Write tenant root document
   const tenantRef = doc(db, tenantRootDocPath(tenantId));
   await setDoc(
     tenantRef,
     {
-      tenantId,
-      brandName: tenantMeta.brandName || "NexTeam-Studio",
-      avatarName: tenantMeta.avatarName || "Nexi",
-      industry: tenantMeta.industry || "field-service",
-      accentColor: tenantMeta.accentColor || "#4F46E5",
-      activeSubagentIds: enabledIds,
-      updatedAt: serverTimestamp()
+      ...bootstrapPlan.tenantRootPatch,
+      updatedAt: serverTimestamp(),
     },
     { merge: true }
   );
 
-  // Write each subagent config document
-  for (const subagent of subagents) {
+  for (const subagent of bootstrapPlan.subagentDocuments) {
     const subRef = doc(db, tenantSubagentDocPath(tenantId, subagent.id));
     await setDoc(
       subRef,
       {
-        id: subagent.id,
-        name: subagent.name,
-        role: subagent.role,
-        enabled: enabledSet.has(subagent.id),
-        customInstructions: null, // operator can set tenant-specific instructions here
-        updatedAt: serverTimestamp()
+        ...subagent,
+        updatedAt: serverTimestamp(),
       },
       { merge: true }
     );
   }
 
-  console.log(`[tenantSubagentService] ✅ initialized tenant: ${tenantId} with ${enabledIds.length} subagents`);
+  console.log(
+    `[tenantSubagentService] initialized tenant: ${tenantId} with ${bootstrapPlan.tenantRootPatch.activeSubagentIds.length} subagents`
+  );
+
+  return bootstrapPlan;
 }
 
 /**

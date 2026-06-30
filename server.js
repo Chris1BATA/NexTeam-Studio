@@ -32,6 +32,8 @@ import {
   applyTenantBootstrapClaims,
   verifyFirebaseIdTokenFromAuthorizationHeader,
 } from "./src/server/firebaseAuthClaimsService.js";
+import { isPlatformOperator } from "./src/features/tenancy/services/tenantAccessPolicy.js";
+import { createFirebaseConversationTenantProvisioner } from "./src/server/firebaseConversationTenantProvisioningRepository.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 loadLocalEnv();
@@ -85,11 +87,20 @@ const GOOGLE_OAUTH_SCOPE_PRESETS = {
   ],
 };
 
+let cachedConversationTenantProvisioner = null;
+
 app.use(express.json({ limit: "15mb" }));
 
 function filterProxyResponseHeader(name) {
   const lower = String(name || "").toLowerCase();
   return !["connection", "content-encoding", "content-length", "keep-alive", "transfer-encoding"].includes(lower);
+}
+
+function getConversationTenantProvisioner() {
+  if (!cachedConversationTenantProvisioner) {
+    cachedConversationTenantProvisioner = createFirebaseConversationTenantProvisioner();
+  }
+  return cachedConversationTenantProvisioner;
 }
 
 function renderDevServerUnavailablePage({ targetUrl, requestPath }) {
@@ -779,6 +790,37 @@ app.get("/api/internal/firebase-auth/me", async (req, res) => {
     const message = String(err?.message || "Firebase token verification failed.");
     console.error("[firebase-auth/me] error:", message);
     return res.status(401).json({ ok: false, error: message });
+  }
+});
+
+app.post("/api/internal/tenants/provision-from-session", async (req, res) => {
+  try {
+    const authorization = req.get("authorization") || "";
+    const { actorScope } = await verifyFirebaseIdTokenFromAuthorizationHeader(authorization);
+    if (!isPlatformOperator(actorScope)) {
+      return res.status(403).json({
+        ok: false,
+        error: "Platform operator access is required to provision tenants from completed sessions.",
+      });
+    }
+
+    const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId.trim() : "";
+    if (!sessionId) {
+      return res.status(400).json({ ok: false, error: "sessionId is required." });
+    }
+
+    const result = await getConversationTenantProvisioner().provisionSessionById(sessionId);
+    return res.json(result);
+  } catch (err) {
+    const message = String(err?.message || "Tenant provisioner failed.");
+    const status =
+      /not found/i.test(message) ? 404 :
+      /required|cannot provision|refusing to provision/i.test(message) ? 400 :
+      /authorization|token|auth/i.test(message) ? 401 :
+      500;
+
+    console.error("[tenants/provision-from-session] error:", message);
+    return res.status(status).json({ ok: false, error: message });
   }
 });
 
