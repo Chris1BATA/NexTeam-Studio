@@ -1,23 +1,24 @@
 import { initializeApp } from "firebase/app";
 import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 import { connectAuthEmulator, getAuth } from "firebase/auth";
+import { getRuntimeConfigValue } from "./runtimeConfig.js";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: getRuntimeConfigValue("VITE_FIREBASE_API_KEY"),
+  authDomain: getRuntimeConfigValue("VITE_FIREBASE_AUTH_DOMAIN"),
+  projectId: getRuntimeConfigValue("VITE_FIREBASE_PROJECT_ID"),
+  storageBucket: getRuntimeConfigValue("VITE_FIREBASE_STORAGE_BUCKET"),
+  messagingSenderId: getRuntimeConfigValue("VITE_FIREBASE_MESSAGING_SENDER_ID"),
+  appId: getRuntimeConfigValue("VITE_FIREBASE_APP_ID")
 };
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
-const FIRESTORE_EMULATOR_HOST = String(import.meta.env.VITE_FIRESTORE_EMULATOR_HOST || "").trim();
-const FIRESTORE_EMULATOR_PORT = Number(import.meta.env.VITE_FIRESTORE_EMULATOR_PORT || 0);
-const FIREBASE_AUTH_EMULATOR_URL = String(import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_URL || "").trim();
+const FIRESTORE_EMULATOR_HOST = String(getRuntimeConfigValue("VITE_FIRESTORE_EMULATOR_HOST", "") || "").trim();
+const FIRESTORE_EMULATOR_PORT = Number(getRuntimeConfigValue("VITE_FIRESTORE_EMULATOR_PORT", 0) || 0);
+const FIREBASE_AUTH_EMULATOR_URL = String(getRuntimeConfigValue("VITE_FIREBASE_AUTH_EMULATOR_URL", "") || "").trim();
 
 let firestoreEmulatorConnected = false;
 let authEmulatorConnected = false;

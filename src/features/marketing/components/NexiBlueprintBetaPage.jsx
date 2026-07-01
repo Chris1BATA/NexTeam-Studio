@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { getRuntimeConfigValue } from "../../../runtimeConfig.js";
 
 const pageStyles = {
   page: {
@@ -300,7 +301,7 @@ function buildMailto({ name, email, business, website, bottleneck }) {
 }
 
 export default function NexiBlueprintBetaPage() {
-  const paymentLink = import.meta.env.VITE_NEXI_BLUEPRINT_PAYMENT_LINK || "";
+  const paymentLink = getRuntimeConfigValue("VITE_NEXI_BLUEPRINT_PAYMENT_LINK", "");
   const hasPaymentLink = paymentLink && paymentLink !== "undefined" && paymentLink !== "#";
   const primaryCtaLabel = hasPaymentLink ? "Claim Beta Access" : "Request Beta Spot";
   const [formValues, setFormValues] = useState(initialForm);

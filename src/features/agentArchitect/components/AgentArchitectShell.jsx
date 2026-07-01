@@ -293,7 +293,7 @@ export function AgentArchitectShell() {
         pushChunk(cleanDelta);
         setStreamingText((current) => current + cleanDelta);
       },
-      async () => {
+      async (completionMeta = {}) => {
         const COMPLETION_PHRASES = [
           "give me a moment while i put it together",
           "give me a moment while i put this together",
@@ -316,6 +316,11 @@ export function AgentArchitectShell() {
         setStreamingText("");
         setIsStreaming(false);
         send({ type: "STREAM_COMPLETE" });
+
+        if (completionMeta?.bypassExtractor) {
+          send({ type: "READY_FOR_INPUT" });
+          return;
+        }
 
         const extracted = await extractPatch(transcript, draftPatch);
 
@@ -426,7 +431,7 @@ export function AgentArchitectShell() {
           isLoadingSavedSpec && !hasReviewSpec ? (
             <div style={shellStyles.reviewLoading}>Loading your blueprint…</div>
           ) : hasReviewSpec ? (
-            <SpecReviewPanel agentSpec={reviewSpec} />
+            <SpecReviewPanel agentSpec={reviewSpec} sessionId={sessionId} agentId={agentId} />
           ) : (
             <div style={shellStyles.reviewError}>
               Your blueprint was completed, but we couldn’t load it into the review screen. Please refresh and try again.

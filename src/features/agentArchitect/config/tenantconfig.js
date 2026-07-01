@@ -17,11 +17,12 @@
  */
 
 import { assertSafeTenantId } from "../../tenancy/services/tenantPathUtils.js";
+import { getRuntimeConfigValue } from "../../../runtimeConfig.js";
 
 // The active tenant for this deployment.
 // In production this will come from the URL (subdomain or path param).
 // For now it defaults to the NexTeam-Studio demo/default tenant.
-export const DEFAULT_TENANT_ID = import.meta.env.VITE_TENANT_ID || "nexteam-studio";
+export const DEFAULT_TENANT_ID = getRuntimeConfigValue("VITE_TENANT_ID", "nexteam-studio");
 assertSafeTenantId(DEFAULT_TENANT_ID);
 
 /**

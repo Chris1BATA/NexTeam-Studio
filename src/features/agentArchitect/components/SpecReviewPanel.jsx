@@ -1,3 +1,11 @@
+import { useState } from "react";
+import {
+  buildStripeRedirectUrl,
+  createBlueprintRequest,
+  markBlueprintCheckoutStarted,
+} from "../services/blueprintRequestClient.js";
+import { getRuntimeConfigValue } from "../../../runtimeConfig.js";
+
 const reviewStyles = {
   card: {
     width: "100%",
@@ -8,7 +16,7 @@ const reviewStyles = {
     padding: "32px",
     display: "flex",
     flexDirection: "column",
-    gap: "20px"
+    gap: "20px",
   },
   eyebrow: {
     color: "#4F46E5",
@@ -16,33 +24,33 @@ const reviewStyles = {
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.08em",
-    margin: 0
+    margin: 0,
   },
   title: {
     margin: 0,
     fontSize: "36px",
-    color: "#111827"
+    color: "#111827",
   },
   section: {
     border: "1px solid #E5E7EB",
     borderRadius: "16px",
     padding: "20px",
-    background: "#F9FAFB"
+    background: "#F9FAFB",
   },
   sectionTitle: {
     margin: "0 0 12px 0",
     color: "#4F46E5",
-    fontSize: "18px"
+    fontSize: "18px",
   },
   text: {
     margin: 0,
     color: "#374151",
-    lineHeight: 1.6
+    lineHeight: 1.6,
   },
   badgeRow: {
     display: "flex",
     flexWrap: "wrap",
-    gap: "10px"
+    gap: "10px",
   },
   badge: {
     background: "#EEF2FF",
@@ -50,7 +58,7 @@ const reviewStyles = {
     borderRadius: "999px",
     padding: "8px 14px",
     fontSize: "14px",
-    fontWeight: 600
+    fontWeight: 600,
   },
   priority: {
     display: "inline-block",
@@ -59,12 +67,13 @@ const reviewStyles = {
     borderRadius: "999px",
     padding: "10px 16px",
     fontSize: "16px",
-    fontWeight: 700
+    fontWeight: 700,
   },
   actions: {
     display: "flex",
     gap: "12px",
-    marginTop: "8px"
+    marginTop: "8px",
+    flexWrap: "wrap",
   },
   primaryButton: {
     border: "none",
@@ -73,7 +82,7 @@ const reviewStyles = {
     borderRadius: "12px",
     padding: "12px 18px",
     fontWeight: 700,
-    cursor: "pointer"
+    cursor: "pointer",
   },
   secondaryButton: {
     border: "1px solid #D1D5DB",
@@ -82,18 +91,30 @@ const reviewStyles = {
     borderRadius: "12px",
     padding: "12px 18px",
     fontWeight: 600,
-    cursor: "pointer"
-  }
+    cursor: "pointer",
+  },
+  error: {
+    margin: 0,
+    color: "#B91C1C",
+    fontSize: "14px",
+    lineHeight: 1.6,
+  },
+  note: {
+    margin: 0,
+    color: "#6B7280",
+    fontSize: "13px",
+    lineHeight: 1.6,
+  },
 };
 
 function formatAgentLabel(value) {
-  return value
+  return String(value || "")
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 }
 
-export default function SpecReviewPanel({ agentSpec }) {
+export default function SpecReviewPanel({ agentSpec, sessionId = "", agentId = "" }) {
   const {
     businessName,
     trade,
@@ -101,7 +122,7 @@ export default function SpecReviewPanel({ agentSpec }) {
     agentMission,
     recommendedAgents = [],
     priorityAgent,
-    agentName
+    agentName,
   } = agentSpec || {};
 
   const safeBusinessName = businessName || "Your Business";
@@ -112,14 +133,57 @@ export default function SpecReviewPanel({ agentSpec }) {
   const safeRecommendedAgents = Array.isArray(recommendedAgents) ? recommendedAgents.filter(Boolean) : [];
   const hasPriorityAgent = priorityAgent && priorityAgent !== "not_selected";
   const safeAgentName = agentName || "Your Nexi Agent";
+  const paymentLink =
+    getRuntimeConfigValue("VITE_NEXI_BLUEPRINT_PAYMENT_LINK") || getRuntimeConfigValue("VITE_STRIPE_PAYMENT_LINK");
+  const hasPaymentLink = paymentLink && paymentLink !== "undefined";
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
-  // Build a natural business summary sentence
   const businessSummaryParts = [safeBusinessName, "is a", safeTrade, "business"];
   if (serviceArea) businessSummaryParts.push("serving", serviceArea);
   const businessSummary = businessSummaryParts.join(" ") + ".";
 
-  const paymentLink = import.meta.env.VITE_STRIPE_PAYMENT_LINK;
-  const hasPaymentLink = paymentLink && paymentLink !== "undefined";
+  async function handleContinueToSetup() {
+    if (!hasPaymentLink) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setSubmitError("");
+
+      const request = await createBlueprintRequest({
+        sessionId,
+        agentId,
+        tenantId: "nexteam-studio",
+        businessName: safeBusinessName,
+        trade: safeTrade,
+        serviceArea,
+        agentName: safeAgentName,
+        priorityAgent,
+        recommendedAgents: safeRecommendedAgents,
+        source: "agent-architect-review",
+      });
+
+      await markBlueprintCheckoutStarted(request.requestId, {
+        source: "spec-review-panel",
+        sessionId,
+        businessName: safeBusinessName,
+      });
+
+      const appUrl = getRuntimeConfigValue("VITE_APP_URL", window.location.origin);
+      window.location.href = buildStripeRedirectUrl({
+        paymentLink,
+        appUrl,
+        requestId: request.requestId,
+        sessionId,
+        tenantId: "nexteam-studio",
+      });
+    } catch (error) {
+      setSubmitError(String(error?.message || "Could not start the blueprint checkout flow."));
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <div style={reviewStyles.card}>
@@ -161,21 +225,17 @@ export default function SpecReviewPanel({ agentSpec }) {
           <button
             type="button"
             style={reviewStyles.primaryButton}
-            onClick={() => {
-              const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-              const successUrl = encodeURIComponent(`${appUrl}/success`);
-              const cancelUrl = encodeURIComponent(`${appUrl}/agent-architect`);
-              window.location.href = `${paymentLink}?success_url=${successUrl}&cancel_url=${cancelUrl}`;
-            }}
+            onClick={() => void handleContinueToSetup()}
+            disabled={isSubmitting}
           >
-            Continue to Setup — $197
+            {isSubmitting ? "Preparing checkout..." : "Continue to Setup - $197"}
           </button>
         ) : (
           <button
             type="button"
             style={reviewStyles.primaryButton}
             onClick={() => {
-              window.alert("Thanks — your blueprint is ready. Our team will follow up with the next step for your agent setup.");
+              window.alert("Thanks - your blueprint is ready. Our team will follow up with the next step for your agent setup.");
             }}
           >
             See Next Step
@@ -185,6 +245,13 @@ export default function SpecReviewPanel({ agentSpec }) {
           Start Over
         </button>
       </div>
+
+      {submitError ? <p style={reviewStyles.error}>{submitError}</p> : null}
+      {hasPaymentLink ? (
+        <p style={reviewStyles.note}>
+          This founder-led beta records the blueprint request first, then opens the Stripe payment link.
+        </p>
+      ) : null}
     </div>
   );
 }

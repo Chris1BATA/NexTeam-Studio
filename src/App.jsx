@@ -75,94 +75,99 @@ function RouteFallback() {
 
 export function App() {
   return (
-    <FirebaseTenantAccessBootstrap>
-      <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route path="/" element={<Navigate to="/agent-architect" replace />} />
-          <Route path="/agent-architect" element={<AgentArchitectShell />} />
-          <Route path="/nexi-blueprint-beta" element={<NexiBlueprintBetaPage />} />
-          <Route path="/success" element={<SuccessScreen />} />
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/" element={<Navigate to="/agent-architect" replace />} />
+        <Route
+          path="/agent-architect"
+          element={
+            <FirebaseTenantAccessBootstrap>
+              <AgentArchitectShell />
+            </FirebaseTenantAccessBootstrap>
+          }
+        />
+        <Route path="/nexi-blueprint-beta" element={<NexiBlueprintBetaPage />} />
+        <Route path="/success" element={<SuccessScreen />} />
 
-          <Route
-            path="/admin/sessions"
-            element={
-              <AdminGate>
-                <SessionsView />
-              </AdminGate>
-            }
-          />
+        <Route
+          path="/admin/sessions"
+          element={
+            <AdminGate>
+              <SessionsView />
+            </AdminGate>
+          }
+        />
 
-          <Route
-            path="/mission-control/clients"
-            element={
-              <AdminGate>
-                <MissionControlHome />
-              </AdminGate>
-            }
-          />
+        <Route
+          path="/mission-control/clients"
+          element={
+            <AdminGate>
+              <MissionControlHome />
+            </AdminGate>
+          }
+        />
 
-          <Route
-            path="/mission-control/aquatrace"
-            element={
-              <AdminGate>
-                <AquatraceDashboard />
-              </AdminGate>
-            }
-          />
+        <Route
+          path="/mission-control/aquatrace"
+          element={
+            <AdminGate>
+              <AquatraceDashboard />
+            </AdminGate>
+          }
+        />
 
-          <Route
-            path="/mission-control/google-business-profile"
-            element={
-              <AdminGate>
-                <GoogleBusinessProfileRail />
-              </AdminGate>
-            }
-          />
+        <Route
+          path="/mission-control/google-business-profile"
+          element={
+            <AdminGate>
+              <GoogleBusinessProfileRail />
+            </AdminGate>
+          }
+        />
 
-          <Route
-            path="/mission-control/:tenantId"
-            element={
-              <AdminGate>
-                <TenantWorkspaceShell />
-              </AdminGate>
-            }
-          />
+        <Route
+          path="/mission-control/:tenantId"
+          element={
+            <AdminGate>
+              <TenantWorkspaceShell />
+            </AdminGate>
+          }
+        />
 
-          <Route
-            path="/mission-control/:tenantId/workspace"
-            element={
-              <AdminGate>
-                <TenantWorkspaceShell />
-              </AdminGate>
-            }
-          />
+        <Route
+          path="/mission-control/:tenantId/workspace"
+          element={
+            <AdminGate>
+              <TenantWorkspaceShell />
+            </AdminGate>
+          }
+        />
 
-          <Route
-            path="/mission-control/aquatrace/workspace"
-            element={
-              <AdminGate>
-                <NjordShell />
-              </AdminGate>
-            }
-          />
+        <Route
+          path="/mission-control/aquatrace/workspace"
+          element={
+            <AdminGate>
+              <NjordShell />
+            </AdminGate>
+          }
+        />
 
-          <Route
-            path="/mission-control/aquatrace-case-study"
-            element={<Navigate to="/mission-control/aquatrace/workspace" replace />}
-          />
+        <Route
+          path="/mission-control/aquatrace-case-study"
+          element={<Navigate to="/mission-control/aquatrace/workspace" replace />}
+        />
 
-          <Route
-            path="/mission-control"
-            element={
-              <AdminGate>
-                <MissionControlGate>
-                  <NjordMissionControl />
-                </MissionControlGate>
-              </AdminGate>
-            }
-          />
-        </Routes>
-      </Suspense>
-    </FirebaseTenantAccessBootstrap>
+        <Route
+          path="/mission-control"
+          element={
+            <AdminGate>
+              <MissionControlGate>
+                <NjordMissionControl />
+              </MissionControlGate>
+            </AdminGate>
+          }
+        />
+      </Routes>
+    </Suspense>
   );
 }

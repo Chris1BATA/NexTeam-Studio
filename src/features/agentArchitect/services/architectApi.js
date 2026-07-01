@@ -1,8 +1,9 @@
 import { EXTRACTOR_SYSTEM_PROMPT } from "../prompts/extractorSystemPrompt";
 import { INTERVIEWER_SYSTEM_PROMPT } from "../prompts/interviewerSystemPrompt";
+import { DEFAULT_ANTHROPIC_TEXT_MODEL } from "../../../lib/anthropicModels.js";
 
 const ANTHROPIC_API_URL = "/api/anthropic/v1/messages";
-const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
+const ANTHROPIC_MODEL = DEFAULT_ANTHROPIC_TEXT_MODEL;
 
 // Retry config — rate limits only
 const MAX_RETRIES = 3;
@@ -21,6 +22,63 @@ function buildHeaders() {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normalizeText(value) {
+  return String(value || "").trim();
+}
+
+function getLatestUserQuestion(messages = []) {
+  return [...messages]
+    .reverse()
+    .find((message) => message?.role === "user" && normalizeText(message?.content))
+    ?.content || "";
+}
+
+function isCompanyCamOperatorQuestion(question) {
+  const lower = normalizeText(question).toLowerCase();
+  if (!lower) {
+    return false;
+  }
+
+  return (
+    lower.includes("companycam") ||
+    lower.includes("camp mikell") ||
+    (lower.includes("gallon") && (lower.includes("report") || lower.includes("checklist"))) ||
+    (lower.includes("job data") && (lower.includes("project") || lower.includes("report")))
+  );
+}
+
+async function maybeResolveOperationalQuestion(fullMessages = []) {
+  const question = getLatestUserQuestion(fullMessages);
+  if (!isCompanyCamOperatorQuestion(question)) {
+    return null;
+  }
+
+  const response = await fetch("/api/nexi/operator/query", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      tenantId: "aquatrace",
+      question,
+    }),
+  });
+
+  const payload = await response.json();
+  if (!response.ok || !payload?.handled || !normalizeText(payload?.response)) {
+    const err = new Error(
+      normalizeText(payload?.error || payload?.response || "Nexi could not complete that operational lookup.")
+    );
+    err.isFriendly = true;
+    throw err;
+  }
+
+  return {
+    route: "companycam_operator",
+    response: payload.response,
+  };
 }
 
 async function parseApiError(response) {
@@ -152,6 +210,21 @@ export async function streamInterviewerTurn(
   draftPatch = {},
   currentStage = "business_name"
 ) {
+  try {
+    const operationalResult = await maybeResolveOperationalQuestion(fullMessages);
+    if (operationalResult) {
+      onDelta(operationalResult.response);
+      onComplete({
+        bypassExtractor: true,
+        route: operationalResult.route,
+      });
+      return;
+    }
+  } catch (err) {
+    onError(err);
+    return;
+  }
+
   const compactMessages = buildCompactMessages(fullMessages, draftPatch, currentStage);
 
   const requestBody = JSON.stringify({

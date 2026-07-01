@@ -34,9 +34,10 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     match /agentSessions/{sessionId} {
-      allow read: if request.auth != null;
-      allow create: if isValidAgentSession(request.resource.data);
-      allow update: if isValidAgentSession(request.resource.data);
+      allow read: if isPlatformOperator() || isAgentSessionOwner(resource.data);
+      allow create: if canWriteOwnAgentSession(request.resource.data);
+      allow update: if isPlatformOperator()
+                    || (isAgentSessionOwner(resource.data) && canWriteOwnAgentSession(request.resource.data));
       allow delete: if false;
     }
 
@@ -166,8 +167,15 @@ service cloud.firestore {
           && request.auth.token.role in ["nexteam_admin", "platform_operator"];
     }
 
+    function isPublicSession() {
+      return request.auth != null
+          && request.auth.token.keys().hasAny(["publicSession"])
+          && request.auth.token.publicSession == true;
+    }
+
     function isTenantActor(tenantId) {
       return request.auth != null
+          && !isPublicSession()
           && request.auth.token.keys().hasAny(["tenantId"])
           && request.auth.token.tenantId is string
           && request.auth.token.tenantId == tenantId;
@@ -178,13 +186,28 @@ service cloud.firestore {
     }
 
     function isValidAgentSession(data) {
-      return data.keys().hasAll(["sessionId", "tenantId", "status"])
+      return data.keys().hasAll(["sessionId", "tenantId", "status", "ownerUid"])
           && data.sessionId is string
           && data.sessionId.size() > 0
           && data.sessionId.size() < 128
           && data.tenantId is string
-          && data.tenantId.size() > 0
+          && isSafeTenantId(data.tenantId)
+          && data.ownerUid is string
+          && data.ownerUid.size() > 0
           && data.status in ["in_progress", "completed", "error"];
+    }
+
+    function isAgentSessionOwner(data) {
+      return request.auth != null
+          && data.keys().hasAny(["ownerUid"])
+          && data.ownerUid is string
+          && data.ownerUid == request.auth.uid;
+    }
+
+    function canWriteOwnAgentSession(data) {
+      return request.auth != null
+          && isValidAgentSession(data)
+          && data.ownerUid == request.auth.uid;
     }
 
     function isValidTenantRootWrite(data, tenantId) {

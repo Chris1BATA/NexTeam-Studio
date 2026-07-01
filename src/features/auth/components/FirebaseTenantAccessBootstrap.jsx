@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { DEFAULT_TENANT_ID } from "../../agentArchitect/config/tenantconfig.js";
-import { ensureTenantFirebaseSession } from "../services/firebaseTenantAuthService.js";
+import { ensurePublicFirebaseSession } from "../services/firebaseTenantAuthService.js";
 
 const styles = {
   shell: {
@@ -40,7 +39,7 @@ export function FirebaseTenantAccessBootstrap({ children }) {
   useEffect(() => {
     let active = true;
 
-    ensureTenantFirebaseSession({ tenantId: DEFAULT_TENANT_ID })
+    ensurePublicFirebaseSession()
       .then(() => {
         if (active) {
           setState({ ready: true, error: "" });

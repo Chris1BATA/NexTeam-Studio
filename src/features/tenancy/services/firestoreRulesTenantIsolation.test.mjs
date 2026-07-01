@@ -18,3 +18,15 @@ test("firestore rules include dedicated paths for intake, config, runtime summar
   assert.match(rules, /match \/tenants\/\{tenantId\}\/runtimeSummary\/\{summaryId\}/);
   assert.match(rules, /match \/tenants\/\{tenantId\}\/subagents\/\{subagentId\}/);
 });
+
+test("firestore rules gate agentSessions to the signed-in owner or a platform operator", () => {
+  assert.match(rules, /match \/agentSessions\/\{sessionId\}/);
+  assert.match(rules, /allow read: if isPlatformOperator\(\) \|\| isAgentSessionOwner\(resource\.data\)/);
+  assert.match(rules, /function canWriteOwnAgentSession\(data\)/);
+  assert.match(rules, /data\.ownerUid == request\.auth\.uid/);
+});
+
+test("public session claims are excluded from tenant foundation access", () => {
+  assert.match(rules, /function isPublicSession\(\)/);
+  assert.match(rules, /&& !isPublicSession\(\)/);
+});

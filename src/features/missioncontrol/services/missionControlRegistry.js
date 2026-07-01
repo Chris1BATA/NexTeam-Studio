@@ -1,57 +1,26 @@
-﻿import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
-import { db } from "../../../firebase.js";
-import { NJORD_CONFIG } from "../config/njordConfig.js";
+import { auth } from "../../../firebase.js";
 
-function normalizeDate(value) {
-  return value?.toDate?.()?.toISOString?.() ?? null;
-}
-
-function mapTenantDoc(docSnap) {
-  const data = docSnap.data() || {};
-  return {
-    id: docSnap.id,
-    tenantId: data.tenantId || docSnap.id,
-    brandName: data.brandName || docSnap.id,
-    avatarName: data.avatarName || "Nexi",
-    industry: data.industry || "field-service",
-    accentColor: data.accentColor || "#4F46E5",
-    missionControlEnabled: data.missionControlEnabled === true,
-    registryVisible: data.registryVisible !== false,
-    hostAgent: data.hostAgent || null,
-    caseStudyMode: data.caseStudyMode === true,
-    updatedAt: normalizeDate(data.updatedAt)
-  };
-}
+const MISSION_CONTROL_CLIENTS_ENDPOINT = "/api/internal/mission-control/clients";
 
 export async function fetchMissionControlClients(maxResults = 50) {
-  const q = query(collection(db, "tenants"), orderBy("updatedAt", "desc"), limit(maxResults));
-  const snapshot = await getDocs(q);
-
-  const liveClients = snapshot.docs
-    .map(mapTenantDoc)
-    .filter((client) => client.registryVisible && client.missionControlEnabled);
-
-  const hasNjordCaseStudy = liveClients.some((client) => client.tenantId === NJORD_CONFIG.tenantId);
-
-  if (!hasNjordCaseStudy) {
-    liveClients.unshift({
-      id: NJORD_CONFIG.tenantId,
-      tenantId: NJORD_CONFIG.tenantId,
-      brandName: NJORD_CONFIG.brandName,
-      avatarName: NJORD_CONFIG.agentName,
-      industry: NJORD_CONFIG.industry,
-      accentColor: NJORD_CONFIG.accentColor,
-      missionControlEnabled: true,
-      registryVisible: true,
-      hostAgent: NJORD_CONFIG.agentName,
-      caseStudyMode: true,
-      updatedAt: null,
-      route: "/mission-control/aquatrace/workspace"
-    });
+  if (!auth.currentUser) {
+    throw new Error("Operator session is required to load Mission Control clients.");
   }
 
-  return liveClients.map((client) => ({
-    ...client,
-    route: client.route || `/mission-control/${client.tenantId}`
-  }));
+  const idToken = await auth.currentUser.getIdToken();
+  const response = await fetch(
+    `${MISSION_CONTROL_CLIENTS_ENDPOINT}?maxResults=${encodeURIComponent(Math.max(1, Number(maxResults) || 50))}`,
+    {
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    }
+  );
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload?.error || "Failed to load Mission Control clients.");
+  }
+
+  return Array.isArray(payload?.clients) ? payload.clients : [];
 }

@@ -30,13 +30,26 @@ import {
 import { buildBragiNotificationEmail } from "./src/features/missioncontrol/services/bragiContinuityService.js";
 import {
   applyTenantBootstrapClaims,
+  resolveDefaultBootstrapTenantId,
   verifyFirebaseIdTokenFromAuthorizationHeader,
 } from "./src/server/firebaseAuthClaimsService.js";
+import { getFirebaseAdminAuth, getFirebaseAdminDb } from "./src/server/firebaseAdminApp.js";
+import { createFirebaseBlueprintRequestRepository } from "./src/server/firebaseBlueprintRequestRepository.js";
+import { createBlueprintRequestLifecycleService } from "./src/server/blueprintRequestLifecycleService.js";
+import { resolveCompanyCamFastLookup } from "./src/server/companyCamFastLookupService.js";
 import {
   assertActorCanProvisionAgentSession,
   createFirebaseConversationTenantProvisioner,
   createFirebaseConversationTenantProvisioningDependencies,
 } from "./src/server/firebaseConversationTenantProvisioningRepository.js";
+import { createMissionControlOpsService } from "./src/server/missionControlOpsService.js";
+import { answerNexiOperatorQuestion } from "./src/server/nexiOperatorQueryService.js";
+import { createCompanyCamRail } from "./src/features/missioncontrol/services/companyCamRailService.js";
+import {
+  answerCompanyCamReportQuestion,
+  formatCompanyCamReportAnswer,
+} from "./src/features/missioncontrol/services/companyCamQuestionService.js";
+import { assertTenantAccess, isPlatformOperator } from "./src/features/tenancy/services/tenantAccessPolicy.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 loadLocalEnv();
@@ -92,8 +105,30 @@ const GOOGLE_OAUTH_SCOPE_PRESETS = {
 
 let cachedConversationTenantProvisioner = null;
 let cachedConversationTenantProvisioningDependencies = null;
+let cachedBlueprintRequestLifecycleService = null;
+let cachedMissionControlOpsService = null;
 
 app.use(express.json({ limit: "15mb" }));
+
+app.get("/health", (_req, res) => {
+  return res.json({
+    ok: true,
+    service: "nexteam-studio",
+    timestamp: new Date().toISOString(),
+    firebaseAuthRoutesLive: true,
+    publicBlueprintRoutesLive: true,
+    missionControlOpsRoutesLive: true,
+  });
+});
+
+app.get("/runtime-env.js", (_req, res) => {
+  const runtimeConfig = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => key.startsWith("VITE_"))
+  );
+
+  res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+  return res.send(`window.__NEXTEAM_RUNTIME_CONFIG__ = ${JSON.stringify(runtimeConfig)};`);
+});
 
 function filterProxyResponseHeader(name) {
   const lower = String(name || "").toLowerCase();
@@ -112,6 +147,94 @@ function getConversationTenantProvisioningDependencies() {
     cachedConversationTenantProvisioningDependencies = createFirebaseConversationTenantProvisioningDependencies();
   }
   return cachedConversationTenantProvisioningDependencies;
+}
+
+function buildActorSummary({ decodedToken = {}, actorScope = {} } = {}) {
+  return {
+    uid: decodedToken.uid || "",
+    email: decodedToken.email || "",
+    tenantId: actorScope.tenantId || decodedToken.tenantId || null,
+    role: decodedToken.role || null,
+  };
+}
+
+function getBlueprintRequestLifecycleService() {
+  if (!cachedBlueprintRequestLifecycleService) {
+    const dependencies = getConversationTenantProvisioningDependencies();
+    cachedBlueprintRequestLifecycleService = createBlueprintRequestLifecycleService({
+      repository: createFirebaseBlueprintRequestRepository(),
+      provisioner: getConversationTenantProvisioner(),
+      readAgentSession: dependencies.readAgentSession,
+    });
+  }
+  return cachedBlueprintRequestLifecycleService;
+}
+
+function getMissionControlOpsService() {
+  if (!cachedMissionControlOpsService) {
+    const companyCamRail = createCompanyCamRail();
+    cachedMissionControlOpsService = createMissionControlOpsService({
+      fastLookupResolver: ({ tenantId, question }) =>
+        resolveCompanyCamFastLookup({
+          companyCamRail,
+          tenantId,
+          question,
+        }),
+      workResolver: async ({ tenantId, question }) => {
+        const result = await answerCompanyCamReportQuestion({
+          companyCamRail,
+          tenantId,
+          question,
+        });
+        return {
+          ...result,
+          answerText: formatCompanyCamReportAnswer(result),
+        };
+      },
+    });
+  }
+  return cachedMissionControlOpsService;
+}
+
+async function listMissionControlRegistryClients({ maxResults = 50 } = {}) {
+  const snapshot = await getFirebaseAdminDb(process.env)
+    .collection("tenants")
+    .orderBy("updatedAt", "desc")
+    .limit(maxResults)
+    .get();
+
+  return snapshot.docs
+    .map((doc) => {
+      const data = doc.data() || {};
+      return {
+        id: doc.id,
+        tenantId: data.tenantId || doc.id,
+        brandName: data.brandName || doc.id,
+        avatarName: data.avatarName || "Nexi",
+        industry: data.industry || "field-service",
+        accentColor: data.accentColor || "#4F46E5",
+        missionControlEnabled: data.missionControlEnabled === true,
+        registryVisible: data.registryVisible !== false,
+        hostAgent: data.hostAgent || null,
+        caseStudyMode: data.caseStudyMode === true,
+        updatedAt: data.updatedAt || null,
+        route:
+          typeof data.route === "string" && data.route.trim()
+            ? data.route.trim()
+            : `/mission-control/${data.tenantId || doc.id}`,
+      };
+    })
+    .filter((client) => client.registryVisible && client.missionControlEnabled);
+}
+
+async function requireVerifiedActorFromRequest(req) {
+  const authorization = req.get("authorization") || "";
+  const { decodedToken, actorScope } = await verifyFirebaseIdTokenFromAuthorizationHeader(authorization);
+  return {
+    decodedToken,
+    actorScope,
+    actor: buildActorSummary({ decodedToken, actorScope }),
+  };
 }
 
 function renderDevServerUnavailablePage({ targetUrl, requestPath }) {
@@ -783,6 +906,86 @@ app.post("/api/internal/firebase-auth/tenant-bootstrap", async (req, res) => {
   }
 });
 
+app.post("/api/public/firebase-auth/session", async (_req, res) => {
+  try {
+    const tenantId = resolveDefaultBootstrapTenantId(process.env);
+    if (!tenantId) {
+      throw new Error("FIREBASE_DEFAULT_TENANT_ID must be configured before public Firebase sessions can be issued.");
+    }
+
+    const uid = `public-web-${crypto.randomUUID()}`;
+    const customToken = await getFirebaseAdminAuth(process.env).createCustomToken(uid, {
+      publicSession: true,
+    });
+
+    return res.status(201).json({
+      ok: true,
+      uid,
+      tenantId,
+      customToken,
+    });
+  } catch (err) {
+    const message = String(err?.message || "Public Firebase session bootstrap failed.");
+    console.error("[public/firebase-auth/session] error:", message);
+    return res.status(500).json({ ok: false, error: message });
+  }
+});
+
+app.post("/api/public/blueprint-requests", async (req, res) => {
+  try {
+    const result = await getBlueprintRequestLifecycleService().createRequest(req.body || {});
+    return res.status(201).json({
+      ok: true,
+      ...result,
+    });
+  } catch (err) {
+    const message = String(err?.message || "Blueprint request creation failed.");
+    const status = /required|must be valid/i.test(message) ? 400 : 500;
+    console.error("[public/blueprint-requests] error:", message);
+    return res.status(status).json({ ok: false, error: message });
+  }
+});
+
+app.post("/api/public/blueprint-requests/:requestId/checkout-started", async (req, res) => {
+  try {
+    const result = await getBlueprintRequestLifecycleService().markCheckoutStarted({
+      requestId: req.params.requestId,
+      source: "stripe-payment-link",
+      metadata: req.body || {},
+    });
+    return res.json({ ok: true, ...result });
+  } catch (err) {
+    const message = String(err?.message || "Blueprint request checkout-started failed.");
+    const status =
+      /not found/i.test(message) ? 404 :
+      /cannot transition/i.test(message) ? 409 :
+      /required/i.test(message) ? 400 :
+      500;
+    console.error("[public/blueprint-requests/checkout-started] error:", message);
+    return res.status(status).json({ ok: false, error: message });
+  }
+});
+
+app.post("/api/public/blueprint-requests/:requestId/success-page-viewed", async (req, res) => {
+  try {
+    const result = await getBlueprintRequestLifecycleService().markSuccessPageViewed({
+      requestId: req.params.requestId,
+      source: "success-screen",
+      metadata: req.body || {},
+    });
+    return res.json({ ok: true, ...result });
+  } catch (err) {
+    const message = String(err?.message || "Blueprint request success-page-viewed failed.");
+    const status =
+      /not found/i.test(message) ? 404 :
+      /cannot transition/i.test(message) ? 409 :
+      /required/i.test(message) ? 400 :
+      500;
+    console.error("[public/blueprint-requests/success-page-viewed] error:", message);
+    return res.status(status).json({ ok: false, error: message });
+  }
+});
+
 app.get("/api/internal/firebase-auth/me", async (req, res) => {
   try {
     const authorization = req.get("authorization") || "";
@@ -801,6 +1004,70 @@ app.get("/api/internal/firebase-auth/me", async (req, res) => {
     const message = String(err?.message || "Firebase token verification failed.");
     console.error("[firebase-auth/me] error:", message);
     return res.status(401).json({ ok: false, error: message });
+  }
+});
+
+app.get("/api/internal/blueprint-requests/:requestId", async (req, res) => {
+  try {
+    const { actorScope } = await requireVerifiedActorFromRequest(req);
+    const request = await getBlueprintRequestLifecycleService().loadRequest(req.params.requestId);
+    if (!isPlatformOperator(actorScope)) {
+      assertTenantAccess({
+        actorScope,
+        targetTenantId: request.tenantId || "nexteam-studio",
+        action: "read blueprint request for",
+      });
+    }
+
+    return res.json({
+      ok: true,
+      request,
+    });
+  } catch (err) {
+    const message = String(err?.message || "Blueprint request load failed.");
+    const status =
+      /authorization|token|auth/i.test(message) ? 401 :
+      /tenant access denied/i.test(message) ? 403 :
+      /not found/i.test(message) ? 404 :
+      500;
+    console.error("[internal/blueprint-requests/get] error:", message);
+    return res.status(status).json({ ok: false, error: message });
+  }
+});
+
+app.post("/api/internal/blueprint-requests/:requestId/confirm-paid", async (req, res) => {
+  try {
+    const { actorScope, actor } = await requireVerifiedActorFromRequest(req);
+    if (!isPlatformOperator(actorScope)) {
+      return res.status(403).json({
+        ok: false,
+        error: "Platform operator role is required to confirm paid blueprint requests.",
+      });
+    }
+
+    const result = await getBlueprintRequestLifecycleService().confirmPaidAndProvision({
+      requestId: req.params.requestId,
+      actor,
+      paymentMode: "stripe-payment-link-manual-confirm",
+      source: "operator-paid-confirmation",
+      metadata: req.body || {},
+    });
+
+    return res.json({
+      ok: true,
+      ...result,
+    });
+  } catch (err) {
+    const message = String(err?.message || "Blueprint request paid-confirm failed.");
+    const status =
+      /authorization|token|auth/i.test(message) ? 401 :
+      /platform operator/i.test(message) ? 403 :
+      /not found/i.test(message) ? 404 :
+      /cannot transition/i.test(message) ? 409 :
+      /required|references missing agent session/i.test(message) ? 400 :
+      500;
+    console.error("[internal/blueprint-requests/confirm-paid] error:", message);
+    return res.status(status).json({ ok: false, error: message });
   }
 });
 
@@ -835,6 +1102,174 @@ app.post("/api/internal/tenants/provision-from-session", async (req, res) => {
 
     console.error("[tenants/provision-from-session] error:", message);
     return res.status(status).json({ ok: false, error: message });
+  }
+});
+
+app.post("/api/internal/mission-control/dispatch", async (req, res) => {
+  try {
+    const { actorScope } = await requireVerifiedActorFromRequest(req);
+    const tenantId = typeof req.body?.tenantId === "string" ? req.body.tenantId.trim() : "";
+    const question = typeof req.body?.question === "string" ? req.body.question.trim() : "";
+
+    if (!tenantId || !question) {
+      return res.status(400).json({ ok: false, error: "tenantId and question are required." });
+    }
+
+    assertTenantAccess({
+      actorScope,
+      targetTenantId: tenantId,
+      action: "dispatch Mission Control request for",
+    });
+
+    const result = await getMissionControlOpsService().dispatch({ tenantId, question });
+    return res.json({
+      ok: true,
+      ...result,
+    });
+  } catch (err) {
+    const message = String(err?.message || "Mission Control dispatch failed.");
+    const status =
+      /authorization|token|auth/i.test(message) ? 401 :
+      /tenant access denied/i.test(message) ? 403 :
+      /required/i.test(message) ? 400 :
+      500;
+    console.error("[internal/mission-control/dispatch] error:", message);
+    return res.status(status).json({ ok: false, error: message });
+  }
+});
+
+app.get("/api/internal/mission-control/clients", async (req, res) => {
+  try {
+    const { actorScope } = await requireVerifiedActorFromRequest(req);
+    if (!isPlatformOperator(actorScope)) {
+      return res.status(403).json({
+        ok: false,
+        error: "Platform operator role is required to read the Mission Control registry.",
+      });
+    }
+
+    const maxResults = Math.min(Math.max(Number(req.query?.maxResults || 50), 1), 100);
+    const clients = await listMissionControlRegistryClients({ maxResults });
+
+    return res.json({
+      ok: true,
+      clients,
+    });
+  } catch (err) {
+    const message = String(err?.message || "Mission Control registry load failed.");
+    const status =
+      /authorization|token|auth/i.test(message) ? 401 :
+      /platform operator/i.test(message) ? 403 :
+      500;
+    console.error("[internal/mission-control/clients] error:", message);
+    return res.status(status).json({ ok: false, error: message });
+  }
+});
+
+app.get("/api/internal/mission-control/work-items/:workItemId", async (req, res) => {
+  try {
+    const { actorScope } = await requireVerifiedActorFromRequest(req);
+    const workItemId = String(req.params.workItemId || "").trim();
+    if (!workItemId) {
+      return res.status(400).json({ ok: false, error: "workItemId is required." });
+    }
+
+    const workItem = getMissionControlOpsService().getWorkItem(workItemId);
+    if (!workItem) {
+      return res.status(404).json({ ok: false, error: `Mission Control work item "${workItemId}" was not found.` });
+    }
+
+    assertTenantAccess({
+      actorScope,
+      targetTenantId: workItem.tenantId,
+      action: "read Mission Control work item for",
+    });
+
+    return res.json({
+      ok: true,
+      workItem,
+    });
+  } catch (err) {
+    const message = String(err?.message || "Mission Control work item lookup failed.");
+    const status =
+      /authorization|token|auth/i.test(message) ? 401 :
+      /tenant access denied/i.test(message) ? 403 :
+      /not found/i.test(message) ? 404 :
+      /required/i.test(message) ? 400 :
+      500;
+    console.error("[internal/mission-control/work-item] error:", message);
+    return res.status(status).json({ ok: false, error: message });
+  }
+});
+
+app.post("/api/internal/companycam/report-question", async (req, res) => {
+  try {
+    const expectedSecret = String(process.env.NEXTEAM_INTERNAL_SERVICE_SECRET || "").trim();
+    const receivedSecret = String(req.get("x-nexteam-service-secret") || "").trim();
+    if (!expectedSecret || receivedSecret !== expectedSecret) {
+      return res.status(401).json({ ok: false, error: "Unauthorized internal CompanyCam service request." });
+    }
+
+    const tenantId = typeof req.body?.tenantId === "string" ? req.body.tenantId.trim() : "";
+    const question = typeof req.body?.question === "string" ? req.body.question.trim() : "";
+    if (!tenantId || !question) {
+      return res.status(400).json({ ok: false, error: "tenantId and question are required." });
+    }
+
+    const result = await answerCompanyCamReportQuestion({
+      companyCamRail: createCompanyCamRail(),
+      tenantId,
+      question,
+    });
+
+    return res.json({
+      ok: true,
+      result: {
+        ...result,
+        answerText: formatCompanyCamReportAnswer(result),
+      },
+    });
+  } catch (err) {
+    const message = String(err?.message || "Internal CompanyCam report question failed.");
+    const status =
+      /not approved|scope denied|tenant/i.test(message) ? 403 :
+      /not found/i.test(message) ? 404 :
+      /required|unsupported/i.test(message) ? 400 :
+      500;
+    console.error("[internal/companycam/report-question] error:", message);
+    return res.status(status).json({ ok: false, error: message });
+  }
+});
+
+app.post("/api/nexi/operator/query", async (req, res) => {
+  try {
+    const question = typeof req.body?.question === "string" ? req.body.question.trim() : "";
+    const tenantId = typeof req.body?.tenantId === "string" ? req.body.tenantId.trim() : "aquatrace";
+    const result = await answerNexiOperatorQuestion({ question, tenantId });
+    if (result?.handled && result?.ok === false) {
+      const message = String(result?.response || result?.reason || "Nexi operator query was blocked.");
+      const status =
+        /not approved|tenant|blocked/i.test(message) ? 403 :
+        result?.status || 400;
+      return res.status(status).json({
+        ok: false,
+        ...result,
+      });
+    }
+
+    return res.json({
+      ok: true,
+      ...result,
+    });
+  } catch (err) {
+    const message = String(err?.message || "Nexi operator query failed.");
+    const status = Number(err?.status || 500);
+    console.error("[nexi/operator/query] error:", message);
+    return res.status(status).json({
+      ok: false,
+      error: message,
+      payload: err?.payload || null,
+    });
   }
 });
 
@@ -1085,13 +1520,6 @@ function resolveGoogleOAuthScopeSelection(query = {}) {
 }
 
 function getAquatraceWordpressCredentials() {
-  const appPasswordRaw = getReferenceText("docs/internal/clawdia/reference/aquatrace/aquatrace-wordpress-application-password.txt");
-  const editorLoginRaw = getReferenceText("docs/internal/clawdia/reference/aquatrace/aquatrace-wordpress-editor-login.txt");
-
-  const fallbackApiPassword = appPasswordRaw.match(/Password\s*\r?\n([^\r\n]+)/i)?.[1]?.trim() || "";
-  const fallbackEditorUsername = editorLoginRaw.match(/Username\s*\r?\n([^\r\n]+)/i)?.[1]?.trim() || "";
-  const fallbackEditorPassword = editorLoginRaw.match(/Password\s*\r?\n([^\r\n]+)/i)?.[1]?.trim() || "";
-
   if (WORDPRESS_BASE_URL && WORDPRESS_USERNAME && WORDPRESS_APP_PASSWORD) {
     return {
       siteUrl: WORDPRESS_BASE_URL,
@@ -1104,9 +1532,20 @@ function getAquatraceWordpressCredentials() {
         ? "named_env_editor_credentials"
         : fallbackEditorUsername && fallbackEditorPassword
           ? "reference_editor_fallback"
-          : "none",
+        : "none",
     };
   }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Aquatrace WordPress credentials must be supplied through environment variables in production.");
+  }
+
+  const appPasswordRaw = getReferenceText("docs/internal/clawdia/reference/aquatrace/aquatrace-wordpress-application-password.txt");
+  const editorLoginRaw = getReferenceText("docs/internal/clawdia/reference/aquatrace/aquatrace-wordpress-editor-login.txt");
+
+  const fallbackApiPassword = appPasswordRaw.match(/Password\s*\r?\n([^\r\n]+)/i)?.[1]?.trim() || "";
+  const fallbackEditorUsername = editorLoginRaw.match(/Username\s*\r?\n([^\r\n]+)/i)?.[1]?.trim() || "";
+  const fallbackEditorPassword = editorLoginRaw.match(/Password\s*\r?\n([^\r\n]+)/i)?.[1]?.trim() || "";
 
   const apiPassword = fallbackApiPassword;
   const editorUsername = fallbackEditorUsername;

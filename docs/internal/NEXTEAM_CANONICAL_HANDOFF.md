@@ -2,7 +2,7 @@
 
 Purpose: this is the single corrected handoff for a fresh human or AI session. It separates product vision from current sellable wedge from current build reality, and it only states capabilities as verified when there is repo, test, or live proof.
 
-Last updated: 2026-06-30
+Last updated: 2026-07-01
 
 ## Verification Legend
 
@@ -11,6 +11,32 @@ Last updated: 2026-06-30
 - `NOT BUILT` = no verified implementation for the claimed capability.
 - `DOCUMENTED STRATEGY` = captured in durable docs, but not a shipped runtime capability.
 - `REPORTED / UNVERIFIED` = carried forward from agreed framing or prior handoffs, but not independently re-proven here.
+
+## 0. 2026-07-01 Readiness Delta
+
+This handoff was rechecked against fresh live proofs on `2026-07-01`.
+
+What changed materially:
+
+- `Clawdia -> Atlas` is now proven end to end in the local shared-brain environment. Clawdia queued a real Atlas task, the codex bridge executed the allowlisted audit, and the proof returned to Clawdia. Proof: `C:\Users\Peyto\clawdia-bot\smoke-atlas-roundtrip.mjs`.
+- `Nexi -> Clawdia -> CompanyCam -> back` is now proven against production with tenant enforcement. Aquatrace returns the real Camp Mikell gallons answer, and `tenantId=other-client` returns live `403` with `CompanyCam access is blocked for tenant "other-client".` Proof: `scripts/test-nexi-companycam-roundtrip.mjs`, live `POST /api/nexi/operator/query`.
+- Mission Control fast lane and work lane are now proven live with natural-language variants, not just exact canned phrasing. Proof: `scripts/test-live-mission-control-ops.mjs`.
+- Operator auth, admin gate, Firestore isolation, and blueprint lifecycle / paid-confirmed provisioning were all re-proven live after deploy. Proof: `scripts/test-live-firebase-auth-routes.mjs`, `scripts/test-live-admin-gate.mjs`, `scripts/test-live-firestore-tenant-isolation.mjs`, `scripts/test-live-blueprint-lifecycle.mjs`.
+- The operator tenant registry and provisioned workspace surfaces are now proven live after the registry moved behind a server-backed Admin route. A paid-confirmed proof tenant appears in `/mission-control/clients`, and its workspace opens successfully. Proof: `server.js`, `src/features/missioncontrol/services/missionControlRegistry.js`, `scripts/test-live-provisioned-registry-ui.mjs`.
+- The public Agent Architect surface is **not** fully test-ready. The UI loads, but the live Anthropic request currently fails with `credit balance is too low`. This is now an explicit blocker, not a hidden timeout. Proof: `scripts/test-live-agent-architect-public-flow.mjs`.
+- Resend confirmation email is still only `PARTIAL`. The route exists, but the last live send proof in this audit hit Resend sender/domain restrictions, and the newest rerun in this continuation stopped locally because `NEXTEAM_TEST_EMAIL` was not set. Proof: `scripts/test-live-resend-send.mjs`.
+- Stripe is still payment-link/manual-confirm only. There is no server-side Stripe secret/webhook automation in production yet. Proof: `server.js`, `src/server/blueprintRequestLifecycleService.js`, Railway env-name audit.
+
+Primary rerunnable proof commands from this pass:
+
+- `npm run test:live:readiness-e2e`
+- `npm run test:live:mission-control`
+- `npm run companycam:nexi-roundtrip:test`
+- `npm run test:live:registry-ui`
+- `npm run test:live:blueprint-lifecycle`
+- `npm run test:live:firebase-auth`
+- `npm run test:live:admin-gate`
+- `npm run test:live:firestore-isolation`
 
 ## 1. Three Truths
 
@@ -79,10 +105,14 @@ Status: `REPORTED / UNVERIFIED` as a single canonical phrase set, even though th
 
 | Capability | Status | Correct truth | Proof |
 | --- | --- | --- | --- |
+| Clawdia -> Atlas roundtrip | `BUILT+PROVEN` | Clawdia can queue an allowlisted Atlas task through the shared brain, the codex bridge executes it safely, and proof returns to Clawdia. | `C:\\Users\\Peyto\\clawdia-bot\\brainServer.js`, `C:\\Users\\Peyto\\clawdia-bot\\sharedActionLayer.js`, `C:\\Users\\Peyto\\clawdia-bot\\codexBridgeServer.js`, `C:\\Users\\Peyto\\clawdia-bot\\smoke-atlas-roundtrip.mjs`; live rerun on `2026-07-01` completed task `atlas-roundtrip-status-audit` |
 | WordPress REST publish rail | `BUILT+PROVEN` | Draft creation, media upload, featured image set with cache-busted verify, Yoast write, cleanup are real and live-tested. | `src/features/missioncontrol/services/wordpressApi.js`, `src/features/missioncontrol/services/wordpressRailService.js`, `scripts/test-wordpress-companycam-rail.mjs`; live rerun in this audit created draft `3471`, media `3473`, then cleaned both up |
 | CompanyCam READ rail | `BUILT+PROVEN` | Read-only photo access is real in this repo and live-tested. | `src/features/missioncontrol/services/companyCamReadOnlyService.js`, `src/features/missioncontrol/services/companyCamRailService.js`, `scripts/companycam-test-readonly.mjs`, `scripts/test-wordpress-companycam-rail.mjs` |
 | Conversational CompanyCam job-data retrieval | `BUILT+PROVEN` | A plain-English job-data question can resolve a real Aquatrace project, open the exported report PDF, and answer the requested field from live customer data. | Demonstrated live on `2026-06-30` in the authorized rail environment using Camp Mikell in Toccoa, GA. Source artifact on disk: `C:\\Users\\Peyto\\Dropbox\\Business\\Aquatrace LLC\\Aquatrace\\Customers\\2026\\06 - June\\Camp Mikell\\ExportedCurrentAquatraceSwimmingPoolLeakDetectionChecklist06052026.pdf`. Verified extracted text includes `Camp Mikell (Alex Mastej)`, `237 Camp Mikell Court, Toccoa, Georgia 30577`, and `Estimated Approximate Total Gallons` = `101,000 Gallons`. |
+| Nexi -> Clawdia -> CompanyCam roundtrip | `BUILT+PROVEN` | The real product path is now proven through production: Nexi operator query -> Clawdia route -> CompanyCam rail -> answer back, with tenant-scoped denial for non-Aquatrace tenants. | `server.js`, `src/server/nexiOperatorQueryService.js`, `C:\\Users\\Peyto\\clawdia-bot\\brainServer.js`, `C:\\Users\\Peyto\\clawdia-bot\\commandRouterRuntime.js`, `C:\\Users\\Peyto\\clawdia-bot\\companyCamOperatorRuntime.js`, `scripts/test-nexi-companycam-roundtrip.mjs`; live rerun on `2026-07-01` returned Camp Mikell `101,000 Gallons` and denied `tenantId=other-client` |
+| Mission Control fast lane vs work lane | `BUILT+PROVEN` | Fast lookup returns real CompanyCam project data near-instant, and work lane acknowledges immediately then completes heavy PDF/report extraction asynchronously. Natural-language variants are proven, not just one canned phrase. | `src/server/missionControlOpsService.js`, `src/server/companyCamFastLookupService.js`, `src/server/missionControlOpsService.test.mjs`, `src/server/companyCamFastLookupService.test.mjs`, `scripts/test-live-mission-control-ops.mjs`; live rerun on `2026-07-01` passed fast + work + variant phrasing |
 | Localhost rail seam `127.0.0.1:3210` | `BUILT+PROVEN` | Local API seam exists, is localhost-only, and health route returns `ok`. | `src/features/missioncontrol/services/localRailApiServer.js`, `scripts/run-rail-local-api.mjs`, `scripts/test-local-rail-api.mjs`; live `GET /rail/health` returned `ok:true` |
+| Public Agent Architect / Nexi intake chat | `PARTIAL` | The public UI is live and the route reaches the live Anthropic proxy, but the current production Anthropic key is out of usable balance, so the conversation fails with a provider-side credit error. | `src/features/agentArchitect/services/architectApi.js`, `scripts/test-live-agent-architect-public-flow.mjs`; live rerun on `2026-07-01` captured `400 invalid_request_error` with `Your credit balance is too low to access the Anthropic API` |
 | Google GBP rail | `PARTIAL` | Layer 1 exists: OAuth connect flow, encrypted token vault, refresh logic, and account/location inventory. Post-create/publish is not present. | `src/features/missioncontrol/services/googleBusinessProfileRailService.js`, `src/features/missioncontrol/components/GoogleBusinessProfileRail.jsx`, `server.js`, `scripts/test-gbp-rail.mjs`, `HANDOFF.md` |
 | "Mode A" GBP posting is done | `NOT BUILT` | Do not collapse Layer 1 plumbing into a posting engine. OAuth/token/account inventory is not posting. | Same proof set as GBP rail above; no verified post-create/publish route or service found |
 | Bragi Mode B article engine | `PARTIAL` | Real article/SEO/rail engine exists, but no proven real autonomous finished article has ever been produced successfully by the AI path. | `src/features/missioncontrol/services/bragiModeBService.js`, `src/features/missioncontrol/services/bragiModeBArticleGenerator.js`, `NEXTEAM_DOC_INDEX.md` section `Mode B - Current State & Resume Plan`, `runtime/bragi-mode-b/state/latest-run.json` |
@@ -92,6 +122,11 @@ Status: `REPORTED / UNVERIFIED` as a single canonical phrase set, even though th
 | `nexteam.studio` vs Railway app split | `BUILT+PROVEN` | `nexteam.studio` is a WordPress marketing site. `nexteam-studio-production.up.railway.app` is the live app/runtime. They are separate. | live public checks recorded in `MASTER_ASSET_INVENTORY.md`; `https://nexteam.studio/wp-json/` is WordPress, `https://nexteam-studio-production.up.railway.app/` is the app |
 | `nexteam.studio` origin host is InMotion | `REPORTED / UNVERIFIED` | Public nameserver clues point that way, but the exact hosting-panel authority was not independently re-proven in this handoff. | `MASTER_ASSET_INVENTORY.md` website inventory; hosting login remains intentionally marked unverified there |
 | Conversation-to-tenant provisioner | `BUILT+PROVEN` | A completed Nexi session can provision tenant artifacts, starter blueprint, onboarding session, subagents, and routes. | `src/features/tenancy/services/conversationTenantProvisioner.js`, `src/features/tenancy/services/conversationTenantProvisioner.test.mjs` |
+| Blueprint request -> paid-confirmed -> tenant/client provision | `BUILT+PROVEN` | The beta path is live from public request through checkout-started, success-page-viewed, paid-confirmed, tenant provision, client organization creation, and member attachment. | `server.js`, `src/server/blueprintRequestLifecycleService.js`, `src/server/firebaseBlueprintRequestRepository.js`, `scripts/test-live-blueprint-lifecycle.mjs`; live rerun on `2026-07-01` created then cleaned proof artifacts with `cleanup: completed` |
+| Operator tenant registry + provisioned workspace | `BUILT+PROVEN` | The operator registry now reads through a server-backed Admin route, and a newly provisioned proof tenant becomes visible in `/mission-control/clients` with a working workspace route. | `server.js`, `src/features/missioncontrol/services/missionControlRegistry.js`, `scripts/test-live-provisioned-registry-ui.mjs`; live rerun on `2026-07-01` passed `registry-visible` and `workspace-visible` |
+| Operator auth / admin gate | `BUILT+PROVEN` | Unauthenticated access is blocked, operator bootstrap sets real platform claims, authenticated session reads correctly, and browser-level login/logout works on the admin gate. | `server.js`, `src/features/auth/services/firebaseTenantAuthService.js`, `src/features/admin/components/admingate.jsx`, `scripts/test-live-firebase-auth-routes.mjs`, `scripts/test-live-admin-gate.mjs` |
+| Confirmation email rail to aquatraceleak@gmail.com | `PARTIAL` | The route exists, but delivery is not yet re-proven cleanly in this continuation. Earlier live proof in this audit hit Resend account/domain restrictions, and the newest rerun attempt stopped locally because `NEXTEAM_TEST_EMAIL` was unset. | `scripts/test-live-resend-send.mjs`; prior live proof in this audit returned `502` wrapping Resend `403 validation_error` about verifying a domain and using a matching `from` address |
+| Stripe payment automation | `PARTIAL` | Current flow is payment-link/manual-confirm only. There is no verified server-side Stripe secret/webhook automation in production yet. | `src/features/agentArchitect/services/blueprintRequestClient.js`, `server.js`, `src/server/blueprintRequestLifecycleService.js`, production env-name audit showing `VITE_STRIPE_PAYMENT_LINK` present and no `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` |
 | Provisioner/auth/tenant-isolation proof level | `BUILT+PROVEN` | In this audit, the targeted tenancy suite reran with `12` passing tests and `1` emulator-skipped test. Live auth bootstrap is up, and live cross-tenant denial produced `403 PERMISSION_DENIED`. | `src/features/tenancy/services/conversationTenantProvisioner.test.mjs`, `src/features/tenancy/services/tenantDocumentRepository.test.mjs`, `src/features/tenancy/services/firestoreRulesTenantIsolation.test.mjs`, `src/features/tenancy/services/firestoreTenantRuntimeEmulator.test.mjs`, `server.js`, `MASTER_ASSET_INVENTORY.md` |
 | Earlier "37 tests" claim for the provisioner/auth layer | `REPORTED / UNVERIFIED` | Prior handoffs said `37 tests`. That exact count was not independently re-proven in this audit, so do not state it as fact without rerunning the full prior suite. | current rerun in this audit showed `12` pass, `1` skipped across the targeted tenancy suite |
 | Auth + tenant isolation live | `BUILT+PROVEN` | `/api/internal/firebase-auth/me` and `/api/internal/firebase-auth/tenant-bootstrap` are live; cross-tenant denial is proven live. | `server.js`, `MASTER_ASSET_INVENTORY.md` |
@@ -110,9 +145,9 @@ Status: `REPORTED / UNVERIFIED` as a single canonical phrase set, even though th
 
 ### Real but limited or stale-configured lanes
 
-- `Nexi` Anthropic conversation path = stale model configuration
-- `Njord` specialist AI path = stale model configuration
-- `Bragi` autonomous Mode B AI path = real code, not yet proven on a successful live run
+- `Nexi` public Agent Architect path = live UI and correct model path, but the current production Anthropic balance is too low for successful public conversation responses
+- `Njord` fast/work Mission Control operator lane = proven live for CompanyCam lookup/report work; any Anthropic-backed specialist chat remains dependent on a funded provider key
+- `Bragi` autonomous Mode B AI path = real code, not yet proven on a successful live run, and still dependent on a funded/controlled provider key
 
 ### Framework / authority roles, not independently proven autonomous runtimes
 

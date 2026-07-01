@@ -1,6 +1,11 @@
 import express from "express";
 import { createServer } from "http";
 import { createCompanyCamRail } from "./companyCamRailService.js";
+import {
+  answerCompanyCamReportQuestion,
+  assertAquatraceCompanyCamTenantScope,
+  formatCompanyCamReportAnswer,
+} from "./companyCamQuestionService.js";
 import { createWordPressRail } from "./wordpressRailService.js";
 
 export const LOCAL_RAIL_API_HOST = "127.0.0.1";
@@ -34,11 +39,20 @@ function buildRailApiContext(options = {}) {
     );
   }
 
+  let wordpressRail = null;
+  let wordpressRailError = null;
+  try {
+    wordpressRail = createWordPressRail(options.wordpressCredentials);
+  } catch (error) {
+    wordpressRailError = error;
+  }
+
   return {
     host: LOCAL_RAIL_API_HOST,
     port: Number(options.port || process.env.RAIL_LOCAL_API_PORT || LOCAL_RAIL_API_DEFAULT_PORT),
     railToken,
-    wordpressRail: createWordPressRail(options.wordpressCredentials),
+    wordpressRail,
+    wordpressRailError,
     companyCamRail: createCompanyCamRail(options.companyCamOptions),
   };
 }
@@ -59,6 +73,10 @@ function parseIntegerParam(value, fieldName) {
   }
 
   return parsed;
+}
+
+function parseCompanyCamTenantScope(value) {
+  return assertAquatraceCompanyCamTenantScope(value);
 }
 
 function parseBase64Content(contentBase64) {
@@ -83,6 +101,18 @@ function parseBase64Content(contentBase64) {
   }
 
   return buffer;
+}
+
+function requireWordPressRail(context) {
+  if (context.wordpressRail) {
+    return context.wordpressRail;
+  }
+
+  throw createHttpError(
+    500,
+    "WORDPRESS_RAIL_NOT_CONFIGURED",
+    context.wordpressRailError?.message || "WordPress rail is not configured for this local rail server runtime."
+  );
 }
 
 function sanitizeWordPressDraftResponse(result = {}) {
@@ -178,13 +208,17 @@ export function createLocalRailApiApp(options = {}) {
         host: context.host,
         port: context.port,
         localhostOnly: true,
+        capabilities: {
+          wordpress: Boolean(context.wordpressRail),
+          companyCam: true,
+        },
       },
     });
   });
 
   app.post("/rail/wp/draft", async (req, res) => {
     try {
-      const result = await context.wordpressRail.createDraft(req.body || {});
+      const result = await requireWordPressRail(context).createDraft(req.body || {});
       return res.json({ ok: true, result: sanitizeWordPressDraftResponse(result) });
     } catch (error) {
       return sendStructuredError(res, error);
@@ -195,10 +229,16 @@ export function createLocalRailApiApp(options = {}) {
     try {
       const body = req.body || {};
       const postId = parseIntegerParam(body.postId, "postId");
-      const result = await context.wordpressRail.setYoastFields(postId, {
+      const result = await requireWordPressRail(context).setYoastFields(postId, {
         focusKeyword: body.focusKeyword,
         seoTitle: body.seoTitle,
         metaDescription: body.metaDescription,
+        socialTitle: body.socialTitle,
+        socialDescription: body.socialDescription,
+        socialImageUrl: body.socialImageUrl,
+        twitterTitle: body.twitterTitle,
+        twitterDescription: body.twitterDescription,
+        twitterImageUrl: body.twitterImageUrl,
       });
       return res.json({ ok: true, result });
     } catch (error) {
@@ -209,7 +249,7 @@ export function createLocalRailApiApp(options = {}) {
   app.post("/rail/wp/upload-media", async (req, res) => {
     try {
       const body = req.body || {};
-      const result = await context.wordpressRail.uploadMedia({
+      const result = await requireWordPressRail(context).uploadMedia({
         filename: String(body.filename || "").trim(),
         mimeType: String(body.mimeType || "").trim(),
         buffer: parseBase64Content(body.contentBase64),
@@ -232,7 +272,7 @@ export function createLocalRailApiApp(options = {}) {
       const body = req.body || {};
       const postId = parseIntegerParam(body.postId, "postId");
       const mediaId = parseIntegerParam(body.mediaId, "mediaId");
-      const result = await context.wordpressRail.setFeaturedImage(postId, mediaId);
+      const result = await requireWordPressRail(context).setFeaturedImage(postId, mediaId);
       return res.json({ ok: true, result });
     } catch (error) {
       return sendStructuredError(res, error);
@@ -241,6 +281,7 @@ export function createLocalRailApiApp(options = {}) {
 
   app.get("/rail/companycam/photos", async (req, res) => {
     try {
+      const tenantId = parseCompanyCamTenantScope(req.query.tenantId);
       const perPage = req.query.perPage ? parseIntegerParam(req.query.perPage, "perPage") : undefined;
       const photos = await context.companyCamRail.listAllPhotos({
         perPage,
@@ -250,6 +291,7 @@ export function createLocalRailApiApp(options = {}) {
       return res.json({
         ok: true,
         result: {
+          tenantId,
           count: photos.length,
           photos,
         },
@@ -261,8 +303,71 @@ export function createLocalRailApiApp(options = {}) {
 
   app.get("/rail/companycam/photo/:id", async (req, res) => {
     try {
+      const tenantId = parseCompanyCamTenantScope(req.query.tenantId);
       const photo = await context.companyCamRail.getPhoto(req.params.id);
-      return res.json({ ok: true, result: { photo } });
+      return res.json({ ok: true, result: { tenantId, photo } });
+    } catch (error) {
+      return sendStructuredError(res, error);
+    }
+  });
+
+  app.get("/rail/companycam/projects/search", async (req, res) => {
+    try {
+      const tenantId = parseCompanyCamTenantScope(req.query.tenantId);
+      const perPage = req.query.perPage ? parseIntegerParam(req.query.perPage, "perPage") : undefined;
+      const projects = await context.companyCamRail.searchProjects({
+        perPage,
+        query: req.query.query,
+        modifiedSince: req.query.modifiedSince,
+      });
+      return res.json({
+        ok: true,
+        result: {
+          tenantId,
+          count: projects.length,
+          projects,
+        },
+      });
+    } catch (error) {
+      return sendStructuredError(res, error);
+    }
+  });
+
+  app.get("/rail/companycam/projects/:projectId/documents", async (req, res) => {
+    try {
+      const tenantId = parseCompanyCamTenantScope(req.query.tenantId);
+      const documents = await context.companyCamRail.listProjectDocuments(req.params.projectId);
+      return res.json({
+        ok: true,
+        result: {
+          tenantId,
+          count: documents.length,
+          documents,
+        },
+      });
+    } catch (error) {
+      return sendStructuredError(res, error);
+    }
+  });
+
+  app.post("/rail/companycam/report-question", async (req, res) => {
+    try {
+      const body = req.body || {};
+      const tenantId = parseCompanyCamTenantScope(body.tenantId);
+      const result = await answerCompanyCamReportQuestion({
+        companyCamRail: context.companyCamRail,
+        tenantId,
+        question: body.question,
+        projectQuery: body.projectQuery,
+        projectId: body.projectId,
+      });
+      return res.json({
+        ok: true,
+        result: {
+          ...result,
+          answerText: formatCompanyCamReportAnswer(result),
+        },
+      });
     } catch (error) {
       return sendStructuredError(res, error);
     }
