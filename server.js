@@ -36,7 +36,6 @@ import {
 import { getFirebaseAdminAuth, getFirebaseAdminDb } from "./src/server/firebaseAdminApp.js";
 import { createFirebaseBlueprintRequestRepository } from "./src/server/firebaseBlueprintRequestRepository.js";
 import { createBlueprintRequestLifecycleService } from "./src/server/blueprintRequestLifecycleService.js";
-import { resolveCompanyCamFastLookup } from "./src/server/companyCamFastLookupService.js";
 import {
   assertActorCanProvisionAgentSession,
   createFirebaseConversationTenantProvisioner,
@@ -44,6 +43,7 @@ import {
 } from "./src/server/firebaseConversationTenantProvisioningRepository.js";
 import { createMissionControlOpsService } from "./src/server/missionControlOpsService.js";
 import { answerNexiOperatorQuestion } from "./src/server/nexiOperatorQueryService.js";
+import { createOperationalQuestionService } from "./src/server/operationalQuestionService.js";
 import { createCompanyCamRail } from "./src/features/missioncontrol/services/companyCamRailService.js";
 import {
   answerCompanyCamReportQuestion,
@@ -173,22 +173,36 @@ function getBlueprintRequestLifecycleService() {
 function getMissionControlOpsService() {
   if (!cachedMissionControlOpsService) {
     const companyCamRail = createCompanyCamRail();
+    const operationalQuestionService = createOperationalQuestionService({
+      companyCamRail,
+    });
     cachedMissionControlOpsService = createMissionControlOpsService({
-      fastLookupResolver: ({ tenantId, question }) =>
-        resolveCompanyCamFastLookup({
-          companyCamRail,
-          tenantId,
-          question,
-        }),
-      workResolver: async ({ tenantId, question }) => {
-        const result = await answerCompanyCamReportQuestion({
-          companyCamRail,
+      fastLookupResolver: async ({ tenantId, question }) => {
+        const result = await operationalQuestionService.answerQuestion({
           tenantId,
           question,
         });
         return {
-          ...result,
-          answerText: formatCompanyCamReportAnswer(result),
+          ...(result.result || {}),
+          ok: result.ok,
+          handled: result.handled,
+          answerText: result.response,
+          route: result.route,
+          classification: result.classification,
+        };
+      },
+      workResolver: async ({ tenantId, question }) => {
+        const result = await operationalQuestionService.answerQuestion({
+          tenantId,
+          question,
+        });
+        return {
+          ...(result.result || {}),
+          ok: result.ok,
+          handled: result.handled,
+          answerText: result.response,
+          route: result.route,
+          classification: result.classification,
         };
       },
     });

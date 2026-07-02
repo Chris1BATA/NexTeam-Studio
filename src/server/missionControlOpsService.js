@@ -1,59 +1,8 @@
 import crypto from "crypto";
-
-const FAST_LANE_PATTERNS = [
-  /\bwho(?:'s| is)\b/i,
-  /\bcustomer at\b/i,
-  /\bclient at\b/i,
-  /\bhomeowner at\b/i,
-  /\bproject at\b/i,
-  /\bjob at\b/i,
-  /\blook up\b/i,
-  /\bpull up\b/i,
-  /\bshow me\b/i,
-  /\bfind\b/i,
-  /\bstatus on\b/i,
-  /\bwhat'?s the status on\b/i,
-];
-
-const WORK_LANE_PATTERNS = [
-  /\bgallons?\b/i,
-  /\breport\b/i,
-  /\bchecklist\b/i,
-  /\bpdf\b/i,
-  /\bcalculate\b/i,
-  /\bcalculation\b/i,
-  /\bsummarize\b/i,
-  /\bsummary\b/i,
-  /\bopen\b/i,
-  /\bread\b/i,
-  /\bparse\b/i,
-  /\bextract\b/i,
-  /\bmeasurement\b/i,
-  /\baverage depth\b/i,
-];
+import { classifyOperationalQuestion } from "./operationalQuestionService.js";
 
 function normalizeText(value = "") {
   return String(value || "").trim();
-}
-
-function hasFastLookupIntent(question) {
-  return FAST_LANE_PATTERNS.some((pattern) => pattern.test(question));
-}
-
-function hasWorkLaneIntent(question) {
-  return WORK_LANE_PATTERNS.some((pattern) => pattern.test(question));
-}
-
-function mentionsAddressOrProperty(question) {
-  return (
-    /\b\d{2,}\b/.test(question) ||
-    /\bcourt\b|\broad\b|\brd\b|\bdrive\b|\bdr\b|\bstreet\b|\bst\b|\blane\b|\bln\b|\bavenue\b|\bave\b/i.test(question) ||
-    /\bcamp mikell\b/i.test(question)
-  );
-}
-
-function mentionsPersonOrProject(question) {
-  return /\bcustomer\b|\bclient\b|\bhomeowner\b|\bowner\b|\bproject\b|\bjob\b|\baccount\b/i.test(question);
 }
 
 function createWorkItemId() {
@@ -66,43 +15,49 @@ export function classifyMissionControlRequest(question = "") {
     return {
       lane: "work",
       reason: "empty-question-default",
+      operationalClassification: classifyOperationalQuestion(normalizedQuestion),
     };
   }
 
-  if (hasWorkLaneIntent(normalizedQuestion)) {
+  const operationalClassification = classifyOperationalQuestion(normalizedQuestion);
+  if (operationalClassification.handled && operationalClassification.kind === "report_lookup") {
     return {
       lane: "work",
-      reason: "heavy-companycam-report-request",
+      reason: operationalClassification.reason,
+      operationalClassification,
     };
   }
 
-  if (
-    hasFastLookupIntent(normalizedQuestion) ||
-    (mentionsAddressOrProperty(normalizedQuestion) && mentionsPersonOrProject(normalizedQuestion))
-  ) {
+  if (operationalClassification.handled && operationalClassification.kind === "fast_lookup") {
     return {
       lane: "fast",
-      reason: "simple-lookup-request",
+      reason: operationalClassification.reason,
+      operationalClassification,
     };
   }
 
   return {
     lane: "work",
     reason: "default-to-work",
+    operationalClassification,
   };
 }
 
-function createWorkAck(question) {
+function createWorkAck(question, operationalClassification = classifyOperationalQuestion(question)) {
   const normalizedQuestion = normalizeText(question).toLowerCase();
-  if (normalizedQuestion.includes("gallon")) {
-    return "Acknowledged. I’m opening the exported report and pulling the total gallons now.";
+
+  if (operationalClassification?.kind === "report_lookup" && normalizedQuestion.includes("gallon")) {
+    return "Acknowledged. I'm opening the exported report and pulling the total gallons now.";
   }
 
-  if (normalizedQuestion.includes("report") || normalizedQuestion.includes("checklist")) {
-    return "Acknowledged. I’m reading the exported report now and will return the answer as soon as it’s parsed.";
+  if (
+    operationalClassification?.kind === "report_lookup" &&
+    (normalizedQuestion.includes("report") || normalizedQuestion.includes("checklist"))
+  ) {
+    return "Acknowledged. I'm reading the exported report now and will return the answer as soon as it's parsed.";
   }
 
-  return "Acknowledged. I’m pulling the live job data now and will return the result as soon as it’s ready.";
+  return "Acknowledged. I'm pulling the live job data now and will return the result as soon as it's ready.";
 }
 
 export function createMissionControlOpsService({
@@ -140,7 +95,7 @@ export function createMissionControlOpsService({
       lane: "work",
       status: "queued",
       queuedAt: now(),
-      acknowledgedText: createWorkAck(question),
+      acknowledgedText: createWorkAck(question, classification.operationalClassification),
       result: null,
       error: null,
     };
@@ -201,12 +156,6 @@ export function createMissionControlOpsService({
 }
 
 export const missionControlOpsServiceInternals = {
-  FAST_LANE_PATTERNS,
-  WORK_LANE_PATTERNS,
   createWorkAck,
   createWorkItemId,
-  hasFastLookupIntent,
-  hasWorkLaneIntent,
-  mentionsAddressOrProperty,
-  mentionsPersonOrProject,
 };

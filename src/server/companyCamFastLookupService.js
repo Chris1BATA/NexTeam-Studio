@@ -1,5 +1,6 @@
 import {
   assertAquatraceCompanyCamTenantScope,
+  buildProjectSearchQueries,
   scoreProjectAgainstQuestion,
 } from "../features/missioncontrol/services/companyCamQuestionService.js";
 
@@ -21,18 +22,98 @@ function sanitizeSearchFragment(value = "") {
   return normalizeText(value).replace(/[?.!,;:]+$/g, "").trim();
 }
 
+const LOW_SIGNAL_TOKENS = new Set([
+  "account",
+  "at",
+  "can",
+  "client",
+  "companycam",
+  "customer",
+  "find",
+  "for",
+  "homeowner",
+  "is",
+  "job",
+  "look",
+  "lookup",
+  "me",
+  "owner",
+  "project",
+  "show",
+  "status",
+  "tell",
+  "the",
+  "up",
+  "what",
+  "who",
+  "you",
+]);
+
+function isUsefulCandidateQuery(value = "") {
+  const normalized = sanitizeSearchFragment(value);
+  if (!normalized) {
+    return false;
+  }
+
+  if (/^(?:who|what|can|tell|show|find|look)\b/i.test(normalized)) {
+    return false;
+  }
+
+  if (/^(?:the\s+)?(?:customer|client|homeowner|owner|project|job|account)\s+(?:is\s+)?at\b/i.test(normalized)) {
+    return false;
+  }
+
+  const tokens = tokenizeQuestion(normalized);
+  if (tokens.length === 0) {
+    return false;
+  }
+
+  if (tokens.some((token) => /\d/.test(token))) {
+    return true;
+  }
+
+  const meaningfulTokens = tokens.filter((token) => !LOW_SIGNAL_TOKENS.has(token));
+  return meaningfulTokens.length >= 2;
+}
+
+function splitAddressAndLocation(fragment = "") {
+  const normalized = sanitizeSearchFragment(fragment);
+  if (!normalized) {
+    return {
+      full: "",
+      streetOnly: "",
+      streetWithLocation: "",
+    };
+  }
+
+  const inLocationMatch = normalized.match(/^(.+?)\s+\bin\b\s+(.+)$/i);
+  if (inLocationMatch?.[1]) {
+    return {
+      full: normalized,
+      streetOnly: sanitizeSearchFragment(inLocationMatch[1]),
+      streetWithLocation: normalized,
+    };
+  }
+
+  return {
+    full: normalized,
+    streetOnly: normalized,
+    streetWithLocation: normalized,
+  };
+}
+
 function deriveSearchQuery(question = "") {
   const text = normalizeText(question);
   const forAtMatch = text.match(/\b(?:customer|client|homeowner|owner|project|job|account)\s+(?:at|for|is at)\s+(.+)$/i);
   if (forAtMatch?.[1]) {
-    return sanitizeSearchFragment(forAtMatch[1]);
+    return splitAddressAndLocation(forAtMatch[1]).streetWithLocation;
   }
 
   const addressLeadMatch = text.match(
     /\b(?:who(?:'s| is)|can you tell me who(?:'s| is)?|tell me who(?:'s| is)?|show me who(?:'s| is)?|find who(?:'s| is)?|what'?s the status on)\b.*?\bat\s+(.+)$/i
   );
   if (addressLeadMatch?.[1]) {
-    return sanitizeSearchFragment(addressLeadMatch[1]);
+    return splitAddressAndLocation(addressLeadMatch[1]).streetWithLocation;
   }
 
   const usefulTokens = tokenizeQuestion(text).filter(
@@ -66,26 +147,15 @@ function deriveSearchQuery(question = "") {
 
 function buildCandidateQueries(question = "") {
   const normalized = normalizeText(question);
-  const candidates = new Set();
-  const primary = deriveSearchQuery(normalized);
-  if (primary) {
-    candidates.add(primary);
-    const primaryAddressOnly = sanitizeSearchFragment(primary.replace(/\s+in\s+[A-Za-z, .'-]+$/i, ""));
-    if (primaryAddressOnly && primaryAddressOnly !== primary) {
-      candidates.add(primaryAddressOnly);
-    }
-  }
+  const derivedQuery = deriveSearchQuery(normalized);
+  const derivedAddressParts = splitAddressAndLocation(derivedQuery);
+  const candidates = new Set(buildProjectSearchQueries(normalized, derivedQuery));
 
-  const fullAtMatch = normalized.match(/\b(?:customer|client|homeowner|owner|project|job|account)\s+(?:at|for|is at)\s+(.+)$/i);
-  const fullAtTarget = sanitizeSearchFragment(fullAtMatch?.[1] || "");
-  if (fullAtTarget) {
-    candidates.add(fullAtTarget);
-    const addressBeforeLocation = sanitizeSearchFragment(
-      fullAtTarget.replace(/\s+in\s+[A-Za-z, .'-]+$/i, "")
-    );
-    if (addressBeforeLocation && addressBeforeLocation !== fullAtTarget) {
-      candidates.add(addressBeforeLocation);
-    }
+  if (derivedAddressParts.streetOnly) {
+    candidates.add(derivedAddressParts.streetOnly);
+  }
+  if (derivedAddressParts.streetWithLocation) {
+    candidates.add(derivedAddressParts.streetWithLocation);
   }
 
   const noLeadVerb = sanitizeSearchFragment(
@@ -116,7 +186,7 @@ function buildCandidateQueries(question = "") {
     candidates.add(sanitizeSearchFragment(compactTokens.slice(0, 3).join(" ")));
   }
 
-  return [...candidates].filter(Boolean);
+  return [...candidates].filter((candidate) => isUsefulCandidateQuery(candidate));
 }
 
 function formatAddress(address = {}) {
@@ -221,6 +291,8 @@ export const companyCamFastLookupServiceInternals = {
   deriveSearchQuery,
   formatAddress,
   formatFastLookupAnswer,
+  isUsefulCandidateQuery,
   sanitizeSearchFragment,
+  splitAddressAndLocation,
   tokenizeQuestion,
 };

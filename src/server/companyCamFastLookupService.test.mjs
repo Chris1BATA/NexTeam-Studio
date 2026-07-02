@@ -20,3 +20,13 @@ test("buildCandidateQueries strips conversational filler from client-at lookups"
   assert.ok(candidates.some((entry) => entry.includes("237 Camp Mikell Court in Toccoa")));
   assert.equal(candidates[0], "237 Camp Mikell Court in Toccoa, Georgia");
 });
+
+test("buildCandidateQueries filters out low-signal conversational filler fragments", () => {
+  const candidates = companyCamFastLookupServiceInternals.buildCandidateQueries(
+    "Can you tell me who the client is at 237 Camp Mikell Court in Toccoa, Georgia?"
+  );
+
+  assert.equal(candidates.includes("can you me who"), false);
+  assert.equal(candidates.includes("can you"), false);
+  assert.equal(candidates.includes("the client is at 237 Camp Mikell Court in Toccoa, Georgia"), false);
+});
