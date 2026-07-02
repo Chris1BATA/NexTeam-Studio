@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  answerCompanyCamReportQuestion,
   assertAquatraceCompanyCamTenantScope,
+  buildProjectSearchQueries,
   extractTotalGallonsFromText,
   formatCompanyCamReportAnswer,
   scoreProjectAgainstQuestion,
@@ -61,6 +63,28 @@ test("total gallons extractor pulls the numeric gallons answer from report text"
   assert.match(result.evidenceSnippet, /Estimated Approximate Total Gallons/i);
 });
 
+test("total gallons extractor accepts checklist text that says Gallon singular", () => {
+  const result = extractTotalGallonsFromText(`
+Estimated Approximate Gallons / Inch (Square Footage x .625)
+654 Gallons/ Inch
+Estimated Approximate Total Gallons
+24,250 Gallon
+`);
+
+  assert.equal(result.rawValue, "24,250");
+  assert.equal(result.numericValue, 24250);
+  assert.equal(result.displayValue, "24,250 Gallons");
+});
+
+test("project search queries preserve both sides of a Statehouse-style question", () => {
+  const queries = buildProjectSearchQueries(
+    "What are the total pool gallons in the report for Statehouse Arena in L3 Campus?"
+  );
+
+  assert.ok(queries.includes("Statehouse Arena"));
+  assert.ok(queries.includes("L3 Campus"));
+});
+
 test("project scoring keeps the exact Camp Mikell property tied or ahead of another Toccoa project", () => {
   const question = "What are the total pool gallons in the report for Camp Mikell in Toccoa GA?";
   const campScore = scoreProjectAgainstQuestion(CAMP_MIKELL_PROJECT, question);
@@ -94,4 +118,85 @@ test("formatted CompanyCam answer is readable for operator-facing proofs", () =>
   assert.match(output, /Alex Mastej/);
   assert.match(output, /Brenda Bigley/);
   assert.match(output, /read-only/i);
+});
+
+test("resolver scans all project PDFs and does not stop at a newer non-checklist document", async () => {
+  const fakeRail = {
+    async searchProjects({ query }) {
+      if (query === "Statehouse Arena") {
+        return [];
+      }
+
+      if (query === "L3 Campus") {
+        return [
+          {
+            id: "107515958",
+            name: "L3 Campus",
+            address: {
+              street_address_1: "600 West Lafayette Street",
+              city: "Tallahassee",
+              state: "Florida",
+              postal_code: "32304",
+            },
+          },
+        ];
+      }
+
+      return [];
+    },
+    async listProjectDocuments(projectId) {
+      assert.equal(projectId, "107515958");
+      return [
+        {
+          id: "18142077",
+          name: "L3 Campus - Statehouse Arena.pdf",
+          content_type: "application/pdf",
+          updated_at: 300,
+          url: "mock://statehouse-summary",
+        },
+        {
+          id: "18142076",
+          name: "Swimming Pool Evaporation Calculator | Aquatrace Leak Detection.pdf",
+          content_type: "application/pdf",
+          updated_at: 299,
+          url: "mock://evap",
+        },
+        {
+          id: "18001710",
+          name: "Exported - Current Aquatrace Swimming Pool Leak Detection Checklist 06-23-2026.pdf",
+          content_type: "application/pdf",
+          updated_at: 200,
+          url: "mock://checklist",
+        },
+      ];
+    },
+  };
+
+  const pdfTexts = {
+    "mock://statehouse-summary": { text: "Statehouse Arena overview only", byteLength: 10 },
+    "mock://evap": { text: "Evaporation calculator", byteLength: 10 },
+    "mock://checklist": {
+      text: `
+Estimated Average Depth (Inches)
+37"
+Estimated Approximate Gallons / Inch (Square Footage x .625)
+654 Gallons/ Inch
+Estimated Approximate Total Gallons
+24,250 Gallon
+`,
+      byteLength: 10,
+    },
+  };
+
+  const result = await answerCompanyCamReportQuestion({
+    companyCamRail: fakeRail,
+    tenantId: "aquatrace",
+    question: "What are the total pool gallons in the report for Statehouse Arena in L3 Campus?",
+    extractPdfTextFromUrlImpl: async (url) => pdfTexts[url],
+  });
+
+  assert.equal(result.answer.numericValue, 24250);
+  assert.equal(result.project.id, "107515958");
+  assert.equal(result.sourceDocument.id, "18001710");
+  assert.equal(result.resourcePath.provider, "companycam");
 });
